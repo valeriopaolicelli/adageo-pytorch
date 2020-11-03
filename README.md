@@ -23,5 +23,5 @@ Using our dataset paths management, you only need to decide the SCENARIO (int va
 Remember, SCANARIO = [1 - Sun, 2 - Rain, 3 - Snow, 4 - Night, 5 - Overcast] .  
 `python main.py --expName={what you want} --attention --trainQ=train/queries__queries_biost_few_{SCENARIO} --valQ=val/queries_biost_few_{SCENARIO} --testQ=test/queries_{SCENARIO} --grl --grlDatasets=train/queries+train/queries_biost_few_{SCENARIO}+train/queries_n5_d{SCENARIO} --epochDivider=4 --patience=3 `  
   
-Test model:
-`python eval.py --expName=<what you want> --resume=<path to trained model> --ckpt=best --attention`  
+Test model for a certain Oxford RobotCar SCENARIO:  
+`python eval.py --expName=<what you want> --resume=<path to trained model> --ckpt=best --attention --testQ=test/queries_{SCENARIO}`  
