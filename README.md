@@ -12,7 +12,7 @@ Requirements:
 *  `pip3 install -r requirements.txt`
   
   
-Datasets are available on request.
+Datasets and ResNet18-based AdAGeo are available on request.
   
 Please, set the parameter `--allDatasetsPath` in **const.py** before starting. It is the root path (hardcoded) where you store datasets.
 
