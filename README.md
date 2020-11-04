@@ -13,7 +13,7 @@ Requirements:
   
   
 Datasets and ResNet18-based AdAGeo are available on request.
-Datasets details are provided in *dataset_details.txt*.
+Datasets details are provided in *datasets_details.txt*.
 
 Please, set the parameter `--allDatasetsPath` in **const.py** before starting. It is the root path (hardcoded) where *oxford60k* is located.  
 
