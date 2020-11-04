@@ -3,7 +3,6 @@ import const
 import netvlad
 import network
 import resnet
-import alexnet
 import grl_util
 import commons
 import datasets
