@@ -52,10 +52,7 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
         with torch.no_grad():
             for input, indices in tqdm(subset_dl):
                 input = input.to(opt.device)
-                if opt.attention:
-                    vlad_encoding = model(input, cache=False, mode='atten-vlad', atten_type=opt.atten_type)
-                else:
-                    vlad_encoding = model(input, cache=True)
+                vlad_encoding = model(input)
                 cache[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy()
                 del input, vlad_encoding
                 if opt.isDebug: break
@@ -85,11 +82,7 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
             input = torch.cat([query, positives, negatives])
             del query, positives, negatives
             input = input.to(device=opt.device, dtype=torch.float)
-            
-            if opt.attention:
-                vlad_encoding = model(input, cache=False, mode='atten-vlad', atten_type=opt.atten_type)
-            else:
-                vlad_encoding = model(input, cache=True)
+            vlad_encoding = model(input)
             del input
             
             vladQ, vladP, vladN = torch.split(vlad_encoding, [B, B, nNeg])
@@ -110,10 +103,7 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
             if opt.grl:
                 images, labels = next(iter(grl_dataloader))
                 images, labels = images.cuda(), labels.cuda()
-                if opt.atten_grl:
-                    outputs = model(images, mode='atten-grl')
-                else:
-                    outputs = model(images, mode='grl')
+                outputs = model(images, grl=True)
                 loss_da = cross_entropy_loss(outputs, labels)
                 del images, labels, outputs
                 (loss_da * opt.grlLoss).backward()

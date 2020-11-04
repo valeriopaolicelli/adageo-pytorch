@@ -28,26 +28,18 @@ def add_arguments(parser):
                         choices=['imagenet', 'places'])
     parser.add_argument('--wait', type=int, default=-1, help='PID of process to wait before start.')
     parser.add_argument('--arch', type=str, default='resnet18', help='basenetwork to use', 
-                        choices=['resnet18', 'resnet101', 'resnet152', 'resnet50'])
+                        choices=['resnet18'])
     parser.add_argument('--train_part', action='store_false', help='Train partial network')
     parser.add_argument('--optim', type=str, default='adam',
                         help='optimizer to use', choices=['sgd', 'adam'])
-    
     parser.add_argument('--attention', action='store_true', help='Use attention mechanism')
-    parser.add_argument('--atten_type', type=str, default='cam',
-                        help='Type of attention to apply', choices=['cam', 'channel_cam'])
-
-    
     parser.add_argument('--save_htm', action='store_true', help='Save heatmap during evaluation')
     parser.add_argument('--load_pos', action='store_true', help='Load positives and predictions during evaluation')
     parser.add_argument('--save_pos', action='store_true', help='Save positives and predictions during evaluation')
     parser.add_argument('--save_preds', action='store_true', help='Save predictions')
     parser.add_argument('--scenario', type=int, default=0, help='Scenario su cui testare.')
-    
     parser.add_argument('--isDebug', action="store_true", help='Se vuoi fare solo una prova, utile per debuggare')
     parser.add_argument('--grl', action="store_true", help='Usa il GRL')
-    parser.add_argument('--atten_grl', action="store_true", help='Usa il GRL con attention features')
-    
     parser.add_argument('--epochDivider', type=int, default=5, help='Per dividere un epoca in N parti')
     parser.add_argument('--num_workers', type=int, default=4, help='Per dividere un epoca in N parti')
     parser.add_argument('--grlBatchSize', type=int, default=8, help='Batch size for GRL')

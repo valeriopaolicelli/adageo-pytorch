@@ -26,10 +26,7 @@ def test(opt, eval_set, model, previous_dbFeat=None):
             
             for iteration, (input, indices) in enumerate(tqdm(test_data_loader), 1):
                 input = input.to(opt.device)
-                if opt.attention:
-                    vlad_encoding = model(input, cache=False, mode='atten-vlad', atten_type=opt.atten_type)
-                else:
-                    vlad_encoding = model(input, cache=True)
+                vlad_encoding = model(input)
                 del input
                 dbFeat[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy()
                 del vlad_encoding

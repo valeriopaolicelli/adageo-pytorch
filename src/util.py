@@ -6,6 +6,7 @@ import resnet
 import alexnet
 import grl_util
 import commons
+import datasets
 
 from math import ceil
 from torch.utils.data import DataLoader, SubsetRandomSampler, Subset
@@ -17,7 +18,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
-import datasets
 
 
 class Flatten(nn.Module):
@@ -109,11 +109,7 @@ def get_clusters(opt, cluster_set, model):
         descriptors = np.zeros(shape=(nDescriptors, opt.encoder_dim), dtype=np.float32)
         for iteration, (input, indices) in enumerate(tqdm(data_loader), 1):
             input = input.to(opt.device)
-            if opt.attention:
-                encoder_out = model(input, cache=False, mode='atten-feat', atten_type=opt.atten_type)
-            else:
-                encoder_out = model(input, cache=False, mode='feature')
-            
+            encoder_out = model(input, mode='atten-feat')
             l2_out = F.normalize(encoder_out, p=2, dim=1)
             image_descriptors = l2_out.view(l2_out.size(0), opt.encoder_dim, -1).permute(0, 2, 1)
             batchix = (iteration - 1) * opt.cacheBatchSize * nPerImage
@@ -156,29 +152,7 @@ def build_model(opt):
                     params.requires_grad = False
         else:
             opt.logger.log(f"Train whole network!", False)
-    elif opt.arch == 'resnet101' or opt.arch == 'resnet152' or opt.arch == 'resnet50':
-        opt.encoder_dim = 2048
-        if opt.arch == 'resnet101':
-            backbone = resnet.resnet101(pretrained=True, noBN=True)
-        elif opt.arch == 'resnet152':
-            # backbone = resnet.resnet152(pretrained=True, noBN=True, pretrain=opt.pretrain.lower())
-            backbone = resnet.resnet152(pretrained=True, noBN=True, pretrain='imagenet')
-        else:
-            backbone = resnet.resnet50(pretrained=True, noBN=True, pretrain='imagenet')
-        if opt.train_part:
-            # Train only the last 4th and 5th convblock of the backbone
-            opt.logger.log(f"Train partial network!", False)
-    
-            for name, child in backbone.named_children():
-                if name == 'layer4':
-                    break
-                for name2, params in child.named_parameters():
-                    params.requires_grad = False
-        else:
-            opt.logger.log(f"Train whole network!", False)
-    
-              
-        
+
     ######## Build the netvlad branch
     netvlad_layer = netvlad.NetVLAD(num_clusters=const.num_clusters, dim=opt.encoder_dim)
     
@@ -187,7 +161,7 @@ def build_model(opt):
     else:
         grl_discriminator = None
     
-    model = network.AttenNetVLAD(backbone, netvlad_layer, grl_discriminator)
+    model = network.AttenNetVLAD(backbone, netvlad_layer, grl_discriminator, attention=opt.attention)
     opt.logger.log(f'Built AttenNetVLAD!', False)
     
     if not opt.resume:
