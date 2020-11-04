@@ -7,7 +7,7 @@ Arxiv paper: https://arxiv.org/abs/2010.06897 accepted at WACV2021
 
 
 Requirements:
-*  Python 3.6
+*  Python 3.4+
 *  Pip3
 *  `pip3 install -r requirements.txt`
   
