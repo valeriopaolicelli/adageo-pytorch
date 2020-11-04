@@ -34,7 +34,7 @@ Datasets are organized as follow:
 **x** is the SCENARIO number = [1 - Sun, 2 - Rain, 3 - Snow, 4 - Night, 5 - Overcast] .  
 Please, set the parameter `--allDatasetsPath` in **const.py** before starting. It is the root path (hardcoded) where *oxford60k* is located.  
 
-Train model for a certain Oxford RobotCar SCENARIO:  
+Train model for a certain target SCENARIO:  
 *  Phase 1:  
 *  Phase 2: Training starting from ResNet18 pretrained on Places365 (code already provides model/weights downloading from project https://github.com/CSAILVision/places365) with default parameters set to the ones declared in our paper.  
 Using our dataset paths management, you only need to decide the SCENARIO (int value) of Oxford RobotCar dataset and run the command below.  
