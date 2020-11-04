@@ -17,7 +17,6 @@ import torch.optim as optim
 
 
 ######################################### SETUP #########################################
-#torch.autograd.set_detect_anomaly(True) # This mode should be enabled only for debugging as the different tests will slow down your program execution.
 parser = argparse.ArgumentParser(description='pytorch-NetVlad', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 const.add_arguments(parser)
 opt = parser.parse_args()
@@ -65,8 +64,8 @@ opt.logger.log(f"Train whole set: {query_train_set.name}")
 whole_val_set = datasets.WholeDataset(opt.rootPath, opt.valG, opt.valQ)
 opt.logger.log(f"Val set: {whole_val_set.name}")
 
-#whole_test_set = datasets.WholeDataset(opt.rootPath, opt.testG, opt.testQ)
-#opt.logger.log(f"Test set: {whole_test_set.name}")
+whole_test_set = datasets.WholeDataset(opt.rootPath, opt.testG, opt.testQ)
+opt.logger.log(f"Test set: {whole_test_set.name}")
 
 if opt.grl:
     DA_dict["grl_dataset"] = grl_util.GrlDataset(opt.rootPath, opt.grlDatasets.split("+"), opt.logger)
@@ -74,13 +73,12 @@ if opt.grl:
 opt.logger.log(f"Training model", False)
 
 opt.logger.log(f"Eval before train")
-#_, _, recalls_str = test.test(opt, whole_test_set, model)
-#opt.logger.log(f"Recalls on {whole_test_set.name}: {recalls_str}")
-#recalls, _, recalls_str = test.test(opt, whole_val_set, model)
-#opt.logger.log(f"Recalls on {whole_val_set.name}: {recalls_str}")
+_, _, recalls_str = test.test(opt, whole_test_set, model)
+opt.logger.log(f"Recalls on {whole_test_set.name}: {recalls_str}")
+recalls, _, recalls_str = test.test(opt, whole_val_set, model)
+opt.logger.log(f"Recalls on {whole_val_set.name}: {recalls_str}")
 
-#best_score = recalls[5]
-#best_score = 0
+best_score = recalls[5]
 not_improved = 0
 for epoch in range(opt.start_epoch + 1, opt.nEpochs + 1):
     epoch_start_time = datetime.now()
@@ -89,8 +87,8 @@ for epoch in range(opt.start_epoch + 1, opt.nEpochs + 1):
                                        whole_train_set, query_train_set, DA_dict)
     
     opt.logger.log(f"Eval NetVLAD", False)
-    # _, _, recalls_str = test.test(opt, whole_test_set, model)
-    # opt.logger.log(f"    Recalls on {whole_test_set.name}: {recalls_str}")
+    _, _, recalls_str = test.test(opt, whole_test_set, model)
+    opt.logger.log(f"    Recalls on {whole_test_set.name}: {recalls_str}")
     recalls, _, recalls_str = test.test(opt, whole_val_set, model)
     del _
     opt.logger.log(f"    Recalls on {whole_val_set.name}: {recalls_str}")
