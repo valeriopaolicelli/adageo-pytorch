@@ -109,7 +109,7 @@ def get_clusters(opt, cluster_set, model):
         descriptors = np.zeros(shape=(nDescriptors, opt.encoder_dim), dtype=np.float32)
         for iteration, (input, indices) in enumerate(tqdm(data_loader), 1):
             input = input.to(opt.device)
-            encoder_out = model(input, mode='atten-feat')
+            encoder_out = model(input, mode='feat')
             l2_out = F.normalize(encoder_out, p=2, dim=1)
             image_descriptors = l2_out.view(l2_out.size(0), opt.encoder_dim, -1).permute(0, 2, 1)
             batchix = (iteration - 1) * opt.cacheBatchSize * nPerImage

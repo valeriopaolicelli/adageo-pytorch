@@ -16,7 +16,7 @@ class AttenNetVLAD(nn.Module):
         self.weight_softmax = self.backbone.fc.weight
         self.attention = attention
 
-    def forward(self, input, grl=False, mode='atten-vlad'):
+    def forward(self, input, grl=False, mode='vlad'):
         if grl:
             _, out, _ = self.backbone(input)
             out = self.grl_discriminator(out)
@@ -33,11 +33,13 @@ class AttenNetVLAD(nn.Module):
                 attentionMAP = attentionMAP.view(attentionMAP.size(0), 1, h, w)
                 attentionFeat = feature_convNBN * attentionMAP.expand_as(feature_conv)
 
-                if mode == 'atten-feat':
+                if mode == 'feat':
                     out = attentionFeat
-                elif mode == 'atten-vlad':
+                elif mode == 'vlad':
                     out = self.netvlad_layer(attentionFeat)
             else:
                 _, out, _ = self.backbone(input)
-                out = self.netvlad_layer(out)
+                if mode == 'vlad':
+                    out = self.netvlad_layer(out)
+
         return out
