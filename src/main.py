@@ -1,12 +1,4 @@
 
-import const
-import util
-import datasets
-import commons
-import test
-import train
-import grl_util
-
 import os
 from os.path import join
 from datetime import datetime
@@ -15,87 +7,83 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+import parser
+import util
+import datasets
+import commons
+import test
+import train
+import grl_util
+
 
 ######################################### SETUP #########################################
-parser = argparse.ArgumentParser(description='pytorch-NetVlad', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-const.add_arguments(parser)
-opt = parser.parse_args()
+opt = parser.parse_arguments()
 start_time = datetime.now()
-
-opt.outputFolder = os.path.join(const.runsPath, opt.expName, datetime.now().strftime('%b%d_%H-%M-%S'))
-
-opt.logger = commons.Logger(folder=opt.outputFolder, filename=f"logger.txt")
-opt.logger.log(f'Arguments: {opt}')
-opt.rootPath = os.path.join(opt.allDatasetsPath, opt.rootPath)
-opt.cuda = True
-opt.device = "cuda"
+opt.output_folder = os.path.join(opt.output_path, opt.exp_name, start_time.strftime("%Y-%m-%d_%H-%M-%S"))
+commons.setup_logging(opt.output_folder)
+commons.make_deterministic(opt.seed)
+logging.info(f"Arguments: {opt}")
+opt.root_path = os.path.join(opt.all_datasets_path, opt.root_path)
 DA_dict = {}
 
-commons.pause_while_running(opt.wait)
-commons.make_deterministic(opt.seed)
 
-if opt.isDebug:
-    opt.logger.log("!!! Questa è solo una prova (alcuni cicli for vengono interrotti dopo 1 iterazione), i risultati non sono attendibili !!!\n")
+if opt.is_debug:
+    logging.info("!!! Questa è solo una prova (alcuni cicli for vengono interrotti dopo 1 iterazione), i risultati non sono attendibili !!!\n")
 
 ######################################### MODEL #########################################
-opt.logger.log(f"Building model", False)
+logging.debug(f"Building model")
 model = util.build_model(opt)
 model = model.to(opt.device)
 
 ######################################### OPTIM e LOSSES #########################################
-optimizer = optim.Adam(filter(lambda p: p.requires_grad, 
-                       model.parameters()), lr=opt.lr)
-criterion_netvlad = nn.TripletMarginLoss(margin=const.margin ** 0.5,
-                                         p=2, reduction='sum').to(opt.device)
+optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=opt.lr)
+criterion_netvlad = nn.TripletMarginLoss(margin=opt.margin ** 0.5,
+                                         p=2, reduction="sum").to(opt.device)
 
 ######################################### RESUME #########################################
 if opt.resume:
     opt, model, optimizer, best_score = util.resume_train(opt, model, optimizer)
 
 ######################################### DATASETS #########################################
-opt.logger.log(f"Loading dataset(s) {opt.rootPath}", False)
+logging.debug(f"Loading dataset(s) {opt.root_path}")
 
-query_train_set = datasets.QueryDataset(opt.rootPath, opt.trainG, opt.trainQ)
-opt.logger.log(f"Train query set: {query_train_set.name}")
+query_train_set = datasets.QueryDataset(opt.root_path, opt.train_g, opt.train_q)
+logging.info(f"Train query set: {query_train_set.info}")
 
-whole_train_set = datasets.WholeDataset(opt.rootPath, opt.trainG, opt.trainQ)
-opt.logger.log(f"Train whole set: {query_train_set.name}")
+whole_train_set = datasets.WholeDataset(opt.root_path, opt.train_g, opt.train_q)
+logging.info(f"Train whole set: {whole_train_set.info}")
 
-whole_val_set = datasets.WholeDataset(opt.rootPath, opt.valG, opt.valQ)
-opt.logger.log(f"Val set: {whole_val_set.name}")
+whole_val_set = datasets.WholeDataset(opt.root_path, opt.val_g, opt.val_q)
+logging.info(f"Val set: {whole_val_set.info}")
 
-whole_test_set = datasets.WholeDataset(opt.rootPath, opt.testG, opt.testQ)
-opt.logger.log(f"Test set: {whole_test_set.name}")
+whole_test_set = datasets.WholeDataset(opt.root_path, opt.test_g, opt.test_q)
+logging.info(f"Test set: {whole_test_set.info}")
 
 if opt.grl:
-    DA_dict["grl_dataset"] = grl_util.GrlDataset(opt.rootPath, opt.grlDatasets.split("+"), opt.logger)
+    DA_dict["grl_dataset"] = grl_util.GrlDataset(opt.root_path, opt.grl_datasets.split("+"), opt.logger)
 
-opt.logger.log(f"Training model", False)
+logging.debug(f"Training model")
 
-opt.logger.log(f"Eval before train")
-_, _, recalls_str = test.test(opt, whole_test_set, model)
-opt.logger.log(f"Recalls on {whole_test_set.name}: {recalls_str}")
+logging.info(f"Eval before train")
 recalls, _, recalls_str = test.test(opt, whole_val_set, model)
-opt.logger.log(f"Recalls on {whole_val_set.name}: {recalls_str}")
+logging.info(f"Recalls on {whole_val_set.info}: {recalls_str}")
 
 best_score = recalls[5]
 not_improved = 0
-for epoch in range(opt.start_epoch + 1, opt.nEpochs + 1):
+for epoch in range(opt.start_epoch + 1, opt.n_epochs + 1):
     epoch_start_time = datetime.now()
-    opt.logger.log(f"Train epoch: {epoch:02d}")
+    logging.info(f"Train epoch: {epoch:02d}")
     train_info = train.elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad, 
                                        whole_train_set, query_train_set, DA_dict)
     
-    opt.logger.log(f"Eval NetVLAD", False)
-    _, _, recalls_str = test.test(opt, whole_test_set, model)
-    opt.logger.log(f"    Recalls on {whole_test_set.name}: {recalls_str}")
+    logging.debug(f"Eval NetVLAD")
     recalls, _, recalls_str = test.test(opt, whole_val_set, model)
     del _
-    opt.logger.log(f"    Recalls on {whole_val_set.name}: {recalls_str}")
+    logging.info(f"    Recalls on {whole_val_set.info}: {recalls_str}")
     
     is_best = recalls[5] > best_score
-    util.save_checkpoint(opt, {'epoch': epoch, 'state_dict': model.state_dict(),
-        'recalls': recalls, 'best_score': best_score, 'optimizer': optimizer.state_dict(),
+    util.save_checkpoint(opt, {"epoch": epoch, "state_dict": model.state_dict(),
+        "recalls": recalls, "best_score": best_score, "optimizer": optimizer.state_dict(),
     }, is_best, f"model_{epoch:02d}")
     train_info += f"Time epoch: {str(datetime.now() - epoch_start_time)[:-6]} - "
     if is_best:
@@ -105,33 +93,30 @@ for epoch in range(opt.start_epoch + 1, opt.nEpochs + 1):
     else:
         not_improved += 1
         train_info += f"Not Improved: {not_improved} / {opt.patience}"
-    opt.logger.log(train_info)
+    logging.info(train_info)
     if opt.patience > 0 and not_improved > (opt.patience):
-        opt.logger.log(f"Performance did not improve for {opt.patience} epochs. Stopping.")
+        logging.info(f"Performance did not improve for {opt.patience} epochs. Stopping.")
         break
 
-opt.logger.log(f"Best Recall@5: {best_score:.4f}")
-opt.logger.log(f"Trained for {epoch:02d} epochs, in total in {str(datetime.now() - start_time)[:-6]}")
+logging.info(f"Best Recall@5: {best_score:.4f}")
+logging.info(f"Trained for {epoch:02d} epochs, in total in {str(datetime.now() - start_time)[:-6]}")
 
-model_state_dict = torch.load(join(opt.outputFolder, 'best_model.pth'))['state_dict']
+model_state_dict = torch.load(join(opt.output_folder, "best_model.pth"))["state_dict"]
 model.load_state_dict(model_state_dict)
 model = model.to(opt.device)
 
-final_logger = commons.Logger(folder=opt.outputFolder, filename=f"final_logger.txt")
-final_logger.log(f'Arguments: {opt}\n')
 recalls = [1, 5, 10, 20]
 
-source_test_set = datasets.WholeDataset(opt.rootPath, "val/gallery", f"val/queries")
-_, _, recalls_str  = test.test(opt, source_test_set, model)
-final_logger.log(f"Recalls on {source_test_set.name}: {recalls_str}")
+_, previous_gallery_features, recalls_str  = test.test(opt, whole_test_set, model)
+logging.info(f"Recalls on {whole_test_set.info}: {recalls_str}")
 
-previous_db_features = None
+previous_gallery_features = None
 all_targets_recall_str = ""
 for i in range(5):
-    target_test_set = datasets.WholeDataset(opt.rootPath, "test/gallery", f"test/queries_{i+1}")
-    _, previous_db_features, recalls_str = test.test(opt, target_test_set, model, previous_db_features)
-    final_logger.log(f"Recalls on {target_test_set.name}: {recalls_str}")
+    target_test_set = datasets.WholeDataset(opt.root_path, "test/gallery", f"test/queries_{i+1}")
+    _, previous_gallery_features, recalls_str = test.test(opt, target_test_set, model, previous_gallery_features)
+    logging.info(f"Recalls on {target_test_set.info}: {recalls_str}")
     all_targets_recall_str += recalls_str
 
-final_logger.log(f"Recalls all targets: {all_targets_recall_str}")
+logging.info(f"Recalls all targets: {all_targets_recall_str}")
 

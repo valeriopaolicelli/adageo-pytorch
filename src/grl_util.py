@@ -1,9 +1,11 @@
 
 import glob
 import random
+import logging
 import torch
 import torch.nn as nn
 from PIL import Image
+import torchvision.transforms as transforms
 
 class GradientReversalFunction(torch.autograd.Function):
     @staticmethod
@@ -34,7 +36,6 @@ def get_discriminator(input_dim, num_classes=2):
     )
     return discriminator
 
-import torchvision.transforms as transforms
 grl_transform = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.ColorJitter(brightness=0.7, contrast=0.7, saturation=0.7, hue=0.1),
@@ -43,7 +44,7 @@ grl_transform = transforms.Compose([
     ])
 
 class GrlDataset(torch.utils.data.Dataset):
-    def __init__(self, root_path, datasets_paths, logger=None):
+    def __init__(self, root_path, datasets_paths):
         """
         datasets_paths è una lista con le cartelle che contengono gli N datasets.
         dall'esterno GrlDataset ha 1000000 elementi, e quando ne richiedo uno
@@ -52,19 +53,15 @@ class GrlDataset(torch.utils.data.Dataset):
         """
         super().__init__()
         self.num_classes = len(datasets_paths)
-        self._print(logger, f"GrlDataset ha {self.num_classes} classi")
+        logging.info(f"GrlDataset ha {self.num_classes} classi")
         self.images_paths = []
         for dataset_path in datasets_paths:
             self.images_paths.append(sorted(glob.glob(f"{root_path}/{dataset_path}/**/*.jpg", recursive=True)))
-            self._print(logger, f"    La classe {dataset_path} ha {len(self.images_paths[-1])} immagini")
+            logging.info(f"    La classe {dataset_path} ha {len(self.images_paths[-1])} immagini")
             if len(self.images_paths[-1]) == 0:
                 raise Exception(f"Ha 0 immagini, c'è qualche problema, lancio un'eccezione !!!")
         # suppongo che tutte le immagini abbiano la stessa dimensione
         self.transform = grl_transform
-    def _print(self, logger, output):
-        if logger != None: logger.log(output)
-        else: print(output)
-        
     def __getitem__(self, index):
         num_class = index % self.num_classes
         images_of_class = self.images_paths[num_class]
@@ -74,3 +71,4 @@ class GrlDataset(torch.utils.data.Dataset):
         return tensor, num_class
     def __len__(self):
         return 1000000
+
