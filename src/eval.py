@@ -2,8 +2,8 @@
 import os
 from os.path import join
 from datetime import datetime
-import argparse
 import torch
+import logging
 
 import parser
 import util
@@ -19,11 +19,7 @@ commons.setup_logging(opt.output_folder)
 logging.info(f"Arguments: {opt}")
 opt.root_path = os.path.join(opt.all_datasets_path, opt.root_path)
 
-if opt.is_debug:
-    logging.info("!!! Questa è solo una prova (alcuni cicli for vengono interrotti dopo 1 iterazione), i risultati non sono attendibili !!!\n")
-
 ######################################### MODEL #########################################
-logging.debug(f"=> Building model")
 model = util.build_model(opt)
 
 ######################################### RESUME #########################################
@@ -44,14 +40,14 @@ recalls = [1, 5, 10, 20]
 
 all_targets_recall_str = ""
 
-if opt.scenario == 0:    
-    source_test_set = datasets.WholeDataset(opt.root_path, "val/gallery", f"val/queries")
+if opt.scenario == 0:
+    source_test_set = datasets.WholeDataset(opt.root_path, "val/gallery", "val/queries")
     _, _, recalls_str  = test.test(opt, source_test_set, model)
     del _
     all_targets_recall_str += recalls_str
     logging.info(f"Recalls on {source_test_set.name}: {recalls_str}")
     
-    source_test_set = datasets.WholeDataset(opt.root_path, "test/gallery", f"test/queries")
+    source_test_set = datasets.WholeDataset(opt.root_path, "test/gallery", "test/queries")
     _, previous_db_features, recalls_str  = test.test(opt, source_test_set, model)
     all_targets_recall_str += recalls_str
     logging.info(f"Recalls on {source_test_set.name}: {recalls_str}")

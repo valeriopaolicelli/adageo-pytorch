@@ -44,31 +44,31 @@ grl_transform = transforms.Compose([
     ])
 
 class GrlDataset(torch.utils.data.Dataset):
-    def __init__(self, root_path, datasets_paths):
+    def __init__(self, root_path, datasets_paths, length=1000000):
         """
-        datasets_paths è una lista con le cartelle che contengono gli N datasets.
-        dall'esterno GrlDataset ha 1000000 elementi, e quando ne richiedo uno
-        me ne torna uno a caso, del dataset index % N, per assicurarsi che ogni
-        dataset abbia la stessa probabilità di uscire
+        datasets_paths is a list containing the folders which contain the N datasets.
+        __len__() returns 1000000, and __getitem__(index) returns a random
+        image, from dataset index % N, to ensure that each dataset has the 
+        same chance of being picked
         """
         super().__init__()
         self.num_classes = len(datasets_paths)
-        logging.info(f"GrlDataset ha {self.num_classes} classi")
+        logging.info(f"GrlDataset has {self.num_classes} classes")
         self.images_paths = []
         for dataset_path in datasets_paths:
             self.images_paths.append(sorted(glob.glob(f"{root_path}/{dataset_path}/**/*.jpg", recursive=True)))
-            logging.info(f"    La classe {dataset_path} ha {len(self.images_paths[-1])} immagini")
+            logging.info(f"    Class {dataset_path} has {len(self.images_paths[-1])} images")
             if len(self.images_paths[-1]) == 0:
-                raise Exception(f"Ha 0 immagini, c'è qualche problema, lancio un'eccezione !!!")
-        # suppongo che tutte le immagini abbiano la stessa dimensione
+                raise Exception(f"Class {dataset_path} has 0 images, that's a problem!!!")
         self.transform = grl_transform
+        self.length = length
     def __getitem__(self, index):
         num_class = index % self.num_classes
         images_of_class = self.images_paths[num_class]
-        # ne prendo una a caso
+        # choose a random one
         image_path = random.choice(images_of_class)
         tensor = self.transform(Image.open(image_path).convert("RGB"))
         return tensor, num_class
     def __len__(self):
-        return 1000000
+        return self.length
 

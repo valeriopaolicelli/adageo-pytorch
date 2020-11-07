@@ -1,12 +1,11 @@
 import os
-from os.path import join
 
 import torch
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
 
-__all__ = ['ResNet', 'resnet18', 'resnet50', 'resnet101', 'resnet152']
+__all__ = ['ResNet', 'resnet18']
 
 
 model_urls = {
@@ -182,69 +181,18 @@ class ResNet(nn.Module):
             return x, conv_layer4BN
 
 
-def resnet18(pretrained=False, noBN=False, pretrain='imagenet', **kwargs):
-    """Constructs a ResNet-18 model.
-    Args:
-        pretrain: If True, returns a model pre-trained on ImageNet or on Places365
-    """
-    if pretrain == 'imagenet':
+def resnet18(pretrain="places", noBN=True, **kwargs):
+    if pretrain == "imagenet":
         num_classes = 1000
-        state_dict = model_zoo.load_url(model_urls['resnet18'])
-    else:
+        state_dict = model_zoo.load_url(model_urls["resnet18"])
+    elif pretrain == "places":
         num_classes = 365
-        model_file = 'resnet18_places365.pth.tar'
-        path_model = '/home/valeriop/netvlad/models'
-        if not os.access(join(path_model, model_file), os.R_OK):
-            weight_url = 'http://places2.csail.mit.edu/models_places365/' + model_file
-            os.system('wget ' + weight_url + ' -P /home/valerio/netvlad/models')
-        checkpoint = torch.load(join(path_model, model_file), map_location=lambda storage, loc: storage)
-        state_dict = {str.replace(k, 'module.', ''): v for k, v in checkpoint['state_dict'].items()}
-
+        filename = "resnet18_places365.pth.tar"
+        if not os.path.exists(filename):
+            os.system("wget http://places2.csail.mit.edu/models_places365/resnet18_places365.pth.tar -P .")
+        checkpoint = torch.load(filename, map_location=lambda storage, loc: storage)
+        state_dict = {str.replace(k, "module.", ""): v for k, v in checkpoint["state_dict"].items()}
     model = ResNet(BasicBlock, [2, 2, 2, 2], noBN=noBN, num_classes=num_classes)
-    model.load_state_dict(state_dict)
-    return model
-
-def resnet50(pretrained=False, noBN=False, **kwargs):
-    """Constructs a ResNet-50 model.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet(Bottleneck, [3, 4, 6, 3], noBN=noBN)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
-    return model
-
-
-def resnet101(pretrained=False, noBN=False, **kwargs):
-    """Constructs a ResNet-101 model.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet(Bottleneck, [3, 4, 23, 3], noBN=noBN)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
-    return model
-
-
-def resnet152(pretrained=False, noBN=False, pretrain='imagenet', **kwargs):
-    """Constructs a ResNet-152 model.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    if pretrain == 'imagenet':
-        num_classes = 1000
-        state_dict = model_zoo.load_url(model_urls['resnet152'])
-    else:
-        num_classes = 365
-        model_file = 'resnet152_places365.t7'
-        path_model = '/home/valeriop/netvlad/models'
-        if not os.access(join(path_model, model_file), os.R_OK):
-            weight_url = 'http://places2.csail.mit.edu/models_places365/' + model_file
-            os.system('wget ' + weight_url + ' -P /home/valerio/netvlad/models')
-        checkpoint = torch.load(join(path_model, model_file), map_location=lambda storage, loc: storage)
-        state_dict = {str.replace(k, 'module.', ''): v for k, v in checkpoint['state_dict'].items()}
-
-    model = ResNet(Bottleneck, [3, 8, 36, 3], noBN=noBN, num_classes=num_classes)
     model.load_state_dict(state_dict)
     return model
 

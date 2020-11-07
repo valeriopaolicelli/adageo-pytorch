@@ -1,4 +1,5 @@
 
+import itertools
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -10,7 +11,7 @@ import faiss
 import glob
 import os
 
-def input_transform():
+def transform():
     return transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -38,14 +39,10 @@ def parse_db_struct(root_path, gallery_path, query_path):
 
 
 class WholeDataset(data.Dataset):
-    """
-    __getitem__(index) ritorna:
-        img, index
-    dove img può essere sia una gallery che una query
-    """
+    # Dataset with both gallery and query images
     def __init__(self, root_path, gallery_path, query_path):
         super().__init__()
-        self.input_transform = input_transform()
+        self.transform = transform()
         self.db_struct = parse_db_struct(root_path, gallery_path, query_path)
         self.images = [dbIm for dbIm in self.db_struct.gallery_images]
         self.images += [qIm for qIm in self.db_struct.query_images]
@@ -59,7 +56,7 @@ class WholeDataset(data.Dataset):
         self.info = f"< queries: {query_path} ({self.db_struct.num_queries}); gallery: {gallery_path} ({self.db_struct.num_gallery}) >"
     def __getitem__(self, index):
         img = Image.open(self.images[index])
-        img = self.input_transform(img)
+        img = self.transform(img)
         return img, index
     def __len__(self):
         return len(self.images)
@@ -79,19 +76,14 @@ def collate_fn(batch):
         positive: torch tensor of shape (batch_size, 3, h, w).
         negatives: torch tensor of shape (batch_size, n, 3, h, w).
     """
-    # batch è costruito come lista di elementi che non sono None
     batch = list(filter(lambda x: x is not None, batch))
     if len(batch) == 0:
         return None, None, None, None, None
     query, positive, negatives, indices = zip(*batch)
     query = data.dataloader.default_collate(query)
     positive = data.dataloader.default_collate(positive)
-    # per ogni elemento in negatives vede quanti elementi contiene, quindi li salva
-    # in una lista
     neg_counts = data.dataloader.default_collate([x.shape[0] for x in negatives])
-    # unisce le sottoliste della lista negatives, i confini sono delineati da neg_counts
     negatives = torch.cat(negatives, 0)
-    import itertools
     indices = list(itertools.chain(*indices))
     return query, positive, negatives, neg_counts, indices
 
@@ -105,7 +97,7 @@ class QueryDataset(data.Dataset):
     """
     def __init__(self, root_path, gallery_path, query_path):
         super().__init__()
-        self.input_transform = input_transform()
+        self.transform = transform()
         self.margin = 0.1
         self.db_struct = parse_db_struct(root_path, gallery_path, query_path)
         self.n_neg_sample = 1000 # number of negatives to randomly sample
@@ -114,7 +106,7 @@ class QueryDataset(data.Dataset):
         # fit NN to find them, search by radius
         knn = NearestNeighbors(n_jobs=-1)
         knn.fit(self.db_struct.gallery_utms)
-        self.nontrivial_positives = list(knn.radius_neighbors(self.db_struct.query_utms, # 10 metri
+        self.nontrivial_positives = list(knn.radius_neighbors(self.db_struct.query_utms, # 10 meters
                                                               radius=self.db_struct.train_pos_dist_threshold,
                                                               return_distance=False))
         # radius returns unsorted, sort once now so we dont have to later
@@ -123,7 +115,7 @@ class QueryDataset(data.Dataset):
         # its possible some queries don't have any non trivial potential positives, lets filter those out
         self.queries = np.where(np.array([len(x) for x in self.nontrivial_positives]) > 0)[0]
         # potential negatives are those outside of val_pos_dist_threshold range
-        potential_positives = knn.radius_neighbors(self.db_struct.query_utms, # 25 metri
+        potential_positives = knn.radius_neighbors(self.db_struct.query_utms, # 25 meters
                                                    radius=self.db_struct.val_pos_dist_threshold,
                                                    return_distance=False)
         self.potential_negatives = []
@@ -140,11 +132,11 @@ class QueryDataset(data.Dataset):
         q_offset = self.db_struct.num_gallery
         query_features = self.cache[index + q_offset]
         if np.all(query_features==0):
-            raise Exception(f"Per la query {index} con shape {query_features.shape} le features sono tutte 0!!! " +
-                            f"Non le hai calcolate! {self.db_struct.query_images[index]} | {self.nontrivial_positives[index].tolist()}" + 
-                            "NOTA BENE: questo errore potrebbe essere dovuto al fatto che le queries considerate nel QueryDataset sono "+
-                            "meno rispetto a quelle considerate nel WholeDataset, quindi gli indici sono sfasati!!!" + 
-                            "Puoi trovare il codice per eliminare le queries di train inutili in fondo a questo file")
+            raise Exception(f"For query {self.db_struct.query_images[index]} with index {index} " +
+                            "all features are set to 0!!! You didn't compute them!" + 
+                            "PLEASE NOTE: this error might be due to the fact that in QueryDataset there are "+
+                            "less queries compared to WholeDataset, therefore indexes do not match!!!" + 
+                            "You can find the code to remove trainig queries from the dataset at the bottom of this file.")
         pos_features = self.cache[self.nontrivial_positives[index].tolist()]
         pool_size = self.cache.shape[1]
         faiss_index = faiss.IndexFlatL2(pool_size)
@@ -171,15 +163,14 @@ class QueryDataset(data.Dataset):
         neg_indices = neg_sample[neg_nums].astype(np.int32)
         self.neg_cache[index] = neg_indices
         # End reading features whole train set (cache)
-        ###############################################################
         query = Image.open(self.db_struct.query_images[index])
         positive = Image.open(self.db_struct.gallery_images[pos_index])
-        query = self.input_transform(query)
-        positive = self.input_transform(positive)
+        query = self.transform(query)
+        positive = self.transform(positive)
         negatives = []
         for neg_index in neg_indices:
             negative = Image.open(self.db_struct.gallery_images[neg_index])
-            negative = self.input_transform(negative)
+            negative = self.transform(negative)
             negatives.append(negative)
         negatives = torch.stack(negatives, 0)
         return query, positive, negatives, [index, pos_index] + neg_indices.tolist()
@@ -188,13 +179,13 @@ class QueryDataset(data.Dataset):
 
 
 """
-# questo codice trova le immagini query che non hanno una positiva entro 10 metri
-# si consiglia di eseguirlo sui dataset di train, visto che le query di train senza
-# gallery entro 10 metri non vengono usate. 
-struct = parse_db_struct("/home/valerio/datasets/pitts30k/image/train", "gallery", "queries")
+# This code finds query images which do not have a positive within 10 meters.
+# You can run it on your train set, considering that you will not need queries
+# without any gallery image within 10 meters.
+struct = parse_db_struct(DATASET_PATH, "gallery", "queries")
 knn = NearestNeighbors(n_jobs=-1)
 knn.fit(struct.gallery_utms)
-nontrivial_positives = list(knn.radius_neighbors(struct.query_utms, # 10 metri
+nontrivial_positives = list(knn.radius_neighbors(struct.query_utms, # 10 meters
                                                  radius=struct.train_pos_dist_threshold,
                                                  return_distance=False))
 
@@ -203,7 +194,7 @@ for i, posi in enumerate(nontrivial_positives):
 
 queries = np.where(np.array([len(x) for x in nontrivial_positives]) == 0)[0]
 queries_paths = [struct.query_images[q_index] for q_index in queries]
-print(f"sto per eliminare {len(queries)} immagini query, sei sicuro di voler continuare?")
-#for path in queries_paths: os.remove(path) # decommenta questo per eliminare le immagini
+print(f"I'm about to delete {len(queries)} query images, are you sure?")
+#for path in queries_paths: os.remove(path) # uncomment this to delete images
 """
 

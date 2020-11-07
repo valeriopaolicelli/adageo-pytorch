@@ -6,13 +6,15 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from tqdm import tqdm
+from datetime import datetime
 
 import datasets
 
 
 def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
-                    whole_train_set, query_train_set, DA_dict):
+                    whole_train_set, query_train_set, grl_dataset):
     
+    epoch_start_time = datetime.now()
     epoch_loss = 0
     effective_iterations = 0
     pool_size = opt.encoder_dim * opt.num_clusters
@@ -20,7 +22,6 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
     
     if opt.grl:
         epoch_grl_loss = 0
-        grl_dataset = DA_dict["grl_dataset"]
         cross_entropy_loss = torch.nn.CrossEntropyLoss()
         grl_dataloader = DataLoader(dataset=grl_dataset, num_workers=opt.num_workers,
                                     batch_size=opt.grl_batch_size, shuffle=True, pin_memory=use_cuda)
@@ -34,10 +35,9 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
     for sub_iter in range(subset_num):
         
         ############################################################################
-        logging.debug(f"Building Cache [{sub_iter + 1}/{subset_num}] {'- features weighted' if opt.attention else ''}")
+        logging.debug(f"Building Cache [{sub_iter + 1}/{subset_num}] {'- with attentive features' if opt.attention else ''}")
         
         model.eval()
-        cache = np.zeros((len(whole_train_set), pool_size), dtype=np.float32)
         
         num_galleries = whole_train_set.db_struct.num_gallery
         useful_q_indexes = list(subset_indexes[sub_iter]+num_galleries)[:(opt.cache_refresh_rate)]
@@ -48,13 +48,14 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
                                batch_size=opt.cache_batch_size, shuffle=False,
                                pin_memory=use_cuda)
         
+        cache = np.zeros((len(whole_train_set), pool_size), dtype=np.float32)
         with torch.no_grad():
-            for input, indices in tqdm(subset_dl):
-                input = input.to(opt.device)
-                vlad_encoding = model(input)
+            for inputs, indices in tqdm(subset_dl, ncols=100):
+                inputs = inputs.to(opt.device)
+                vlad_encoding = model(inputs)
                 cache[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy()
-                del input, vlad_encoding
-                if opt.is_debug: break
+                del inputs, vlad_encoding
+        
         query_train_set.cache = cache
         del cache
         
@@ -64,74 +65,57 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
                                        batch_size=opt.batch_size, shuffle=False,
                                        collate_fn=datasets.collate_fn, pin_memory=use_cuda)
         
-        ########################################################################
         # TRAIN
         model.train()
-        for query, positives, negatives, neg_counts, indices in tqdm(query_dataloader):
+        for query, positives, negatives, neg_counts, indices in tqdm(query_dataloader, ncols=100):
             effective_iterations += 1
-            ########################################################################
-            # Process NetVLAD task
             if query is None:
-                continue  # in case we get an empty batch
+                continue # in case we get an empty batch
             
             B, C, H, W = query.shape
             n_neg = torch.sum(neg_counts)
             
-            input = torch.cat([query, positives, negatives])
-            del query, positives, negatives
-            input = input.to(device=opt.device, dtype=torch.float)
-            vlad_encoding = model(input)
-            del input
+            inputs = torch.cat([query, positives, negatives])
+            inputs = inputs.to(device=opt.device)
+            vlad_encoding = model(inputs)
             
             vlad_q, vlad_p, vlad_n = torch.split(vlad_encoding, [B, B, n_neg])
-            del vlad_encoding
+            del query, positives, negatives, inputs, vlad_encoding
             
             optimizer.zero_grad()
-            loss_netvlad = 0
+            loss_triplet = 0
             for i, neg_count in enumerate(neg_counts):
                 for n in range(neg_count):
                     neg_index = (torch.sum(neg_counts[:i]) + n).item()
-                    loss_netvlad += criterion_netvlad(vlad_q[i:i + 1], vlad_p[i:i + 1], vlad_n[neg_index:neg_index + 1])
+                    loss_triplet += criterion_netvlad(vlad_q[i:i + 1], vlad_p[i:i + 1], vlad_n[neg_index:neg_index + 1])
             
-            loss_netvlad /= n_neg.float().to(opt.device)  # normalise by actual number of negatives
+            loss_triplet /= n_neg.float().to(opt.device)  # normalise by actual number of negatives
             
-            if not opt.is_debug: # TODO da eliminare
-                loss_netvlad.backward()
+            loss_triplet.backward()
+            batch_loss = loss_triplet.item()
+            epoch_loss += batch_loss
+            del vlad_q, vlad_p, vlad_n, loss_triplet
             
             if opt.grl:
                 images, labels = next(iter(grl_dataloader))
                 images, labels = images.to(opt.device), labels.to(opt.device)
                 outputs = model(images, grl=True)
-                loss_da = cross_entropy_loss(outputs, labels)
-                del images, labels, outputs
-                (loss_da * opt.grl_loss).backward()
-                epoch_grl_loss += loss_da.item()
+                loss_grl = cross_entropy_loss(outputs, labels)
+                (loss_grl * opt.grl_loss_weight).backward()
+                epoch_grl_loss += loss_grl.item()
+                del images, labels, outputs, loss_grl
             
-            if not opt.is_debug: # TODO da eliminare
-                optimizer.step()
-            
-            batch_loss = loss_netvlad.item()
-            epoch_loss += batch_loss
-            
-            # End NetVLAD task
-            ########################################################################
-            
-            del vlad_q, vlad_p, vlad_n, loss_netvlad
-            if opt.is_debug: break
+            optimizer.step()
         
-        logging.debug(f"Epoch[{epoch}]({effective_iterations}/{num_batches}): " +
-                      f"batch NetVLAD Loss: {batch_loss:.4f} -" +
-                      f" Avg NetVLADLoss: {epoch_loss / (effective_iterations):.4f}")
-        if opt.grl: logging.debug(f"epoch_grl_loss: {epoch_grl_loss / effective_iterations:.4f}")
+        logging.debug(f"Epoch[{epoch:02d}]({effective_iterations}/{num_batches}): " +
+                      f"current batch triplet loss = {batch_loss:.4f}, " +
+                      f"average epoch triplet loss = {epoch_loss / (effective_iterations):.4f}")
+        if opt.grl: logging.debug(f"Average grl epoch loss: {epoch_grl_loss / effective_iterations:.4f}")
         
         del query_dataloader
-        optimizer.zero_grad()
-        
-        torch.cuda.empty_cache()
         del query_train_set.cache
-        if opt.is_debug: break
     
-    if opt.grl: logging.debug(f"epoch_grl_loss: {epoch_grl_loss / effective_iterations:.4f}")
-    query_train_set.cache = None
-    return f"Finished epoch {epoch:02d} -  Avg. Loss NetVLAD: {epoch_loss / effective_iterations:.4f} - "
+    logging.info(f"Finished epoch {epoch:02d} in {str(datetime.now() - epoch_start_time)[:-7]}: "
+                 f"average epoch triplet loss = {epoch_loss / effective_iterations:.4f}")
+    if opt.grl: logging.info(f"Average epoch grl loss: {epoch_grl_loss / effective_iterations:.4f}")
 

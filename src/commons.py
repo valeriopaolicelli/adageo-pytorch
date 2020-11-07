@@ -1,19 +1,20 @@
 
+import torch
+import numpy as np
+import random
+import os
+import sys
+import logging
+import traceback
+
 
 def make_deterministic(seed=0):
-    """
-    Rende deterministici i risultati. 
-    Nota che per alcune librerie (es: la PCA di sklearn) ciò non è sufficiente.
-    """
-    import torch
-    import numpy as np
-    import random
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True   # questo rallenta (dicono)
-    torch.backends.cudnn.benchmark = False      # questo rallenta (dicono)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def setup_logging(output_folder, exist_ok=False, console="debug",
@@ -30,14 +31,9 @@ def setup_logging(output_folder, exist_ok=False, console="debug",
         info_filename (str): the name of the info file. if None, don't create info file
         debug_filename (str): the name of the debug file. if None, don't create debug file
     """
-    import os
-    import sys
-    import logging
-    import traceback
     if not exist_ok and os.path.exists(output_folder):
         raise FileExistsError(f"{output_folder} esiste già !!!")
     os.makedirs(output_folder, exist_ok=True)
-    logging.getLogger("matplotlib.font_manager").disabled = True
     base_formatter = logging.Formatter("%(asctime)s   %(message)s", "%Y-%m-%d %H:%M:%S")
     logger = logging.getLogger("")
     logger.setLevel(logging.DEBUG)
