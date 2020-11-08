@@ -18,7 +18,7 @@ def train(opt, epoch, model, optimizer, criterion_netvlad, whole_train_set,
     epoch_start_time = datetime.now()
     epoch_loss = 0
     effective_iterations = 0
-    pool_size = opt.encoder_dim * opt.num_clusters
+    features_dim = opt.encoder_dim * opt.num_clusters
     use_cuda = opt.device == "cuda"
     
     if opt.grl:
@@ -49,7 +49,7 @@ def train(opt, epoch, model, optimizer, criterion_netvlad, whole_train_set,
                                batch_size=opt.cache_batch_size, shuffle=False,
                                pin_memory=use_cuda)
         
-        cache = np.zeros((len(whole_train_set), pool_size), dtype=np.float32)
+        cache = np.zeros((len(whole_train_set), features_dim), dtype=np.float32)
         with torch.no_grad():
             for inputs, indices in tqdm(subset_dl, ncols=100):
                 inputs = inputs.to(opt.device)

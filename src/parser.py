@@ -29,6 +29,7 @@ def parse_arguments():
     parser.add_argument("--epoch_divider", type=int, default=5, 
                         help="Divide a train epoch in epoch_divider parts. Useful with huge datasets")
     parser.add_argument("--num_workers", type=int, default=6, help="num_workers for all dataloaders")
+    parser.add_argument("--faiss_gpu", action="store_true", help="use faiss-gpu for faster inference")
     parser.add_argument("--grl", action="store_true", help="Use Gradient Reversal Layer (GRL)")
     parser.add_argument("--grl_batch_size", type=int, default=8, help="Batch size for GRL")
     parser.add_argument("--grl_loss_weight", type=float, default=0.1, help="Weight for GRL loss")
@@ -45,8 +46,7 @@ def parse_arguments():
     parser.add_argument("--grl_datasets", type=str,
                         default="train/queries+test/queries_5",
                         help="Paths for GRL datasets, linked by +")
-    parser.add_argument("--output_path", type=str, default="runs", help="Folder with all outputs")
     parser.add_argument("--exp_name", type=str, default="default",
-                        help="Folder name of the current run (saved in output_path)")
+                        help="Folder name of the current run (saved in ./runs/)")
     return parser.parse_args()
 

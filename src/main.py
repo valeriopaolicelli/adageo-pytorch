@@ -18,24 +18,23 @@ import grl_util
 ######################################### SETUP #########################################
 opt = parser.parse_arguments()
 start_time = datetime.now()
-opt.output_folder = os.path.join(opt.output_path, opt.exp_name, start_time.strftime("%Y-%m-%d_%H-%M-%S"))
+opt.output_folder = os.path.join("runs", opt.exp_name, start_time.strftime("%Y-%m-%d_%H-%M-%S"))
 commons.setup_logging(opt.output_folder)
 commons.make_deterministic(opt.seed)
 logging.info(f"Arguments: {opt}")
+logging.info(f"The outputs are being saved in {opt.output_folder}")
 opt.root_path = os.path.join(opt.all_datasets_path, opt.root_path)
 
 ######################################### MODEL #########################################
 model = util.build_model(opt)
-model = model.to(opt.device)
 
 ######################################### OPTIMIZER & LOSSES #########################################
 optimizer = optim.Adam(model.parameters(), lr=opt.lr)
-criterion_netvlad = nn.TripletMarginLoss(margin=opt.margin ** 0.5,
-                                         p=2, reduction="sum").to(opt.device)
+criterion_netvlad = nn.TripletMarginLoss(margin=opt.margin ** 0.5, p=2, reduction="sum")
 
 ######################################### RESUME #########################################
 if opt.resume:
-    opt, model, optimizer, best_score, start_epoch = util.resume_train(opt, model, optimizer)
+    model, optimizer, best_score, start_epoch = util.resume_train(opt, model, optimizer)
 else:
     start_epoch = 0
 
@@ -58,7 +57,6 @@ if opt.grl:
     grl_dataset = grl_util.GrlDataset(opt.root_path, opt.grl_datasets.split("+"))
 else:
     grl_dataset = None
-
 
 ######################################### TRAINING #########################################
 best_score = 0

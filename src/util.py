@@ -34,7 +34,7 @@ def resume_train(opt, model, optimizer):
     optimizer.load_state_dict(checkpoint["optimizer"])
     logging.debug(f"Loaded checkpoint: start_epoch = {start_epoch}, " \
                   f"current_best_recall@5 = {best_score}")
-    return opt, model, optimizer, best_score, start_epoch
+    return model, optimizer, best_score, start_epoch
 
 
 def get_clusters(opt, cluster_set, model):
@@ -95,5 +95,5 @@ def build_model(opt):
         centroids, descriptors = get_clusters(opt, cluster_set, model)
         model.netvlad_layer.init_params(centroids, descriptors)
     
-    return model
+    return model.to(opt.device)
 

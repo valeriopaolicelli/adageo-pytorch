@@ -9,13 +9,13 @@ from tqdm import tqdm
 
 def test(opt, eval_set, model):
     test_dataloader = DataLoader(dataset=eval_set, num_workers=opt.num_workers, 
-                                  batch_size=opt.cache_batch_size, pin_memory=True)
+                                 batch_size=opt.cache_batch_size, pin_memory=True)
     
     model.eval()
     with torch.no_grad():
         logging.debug(f"Extracting Features {'weighted' if opt.attention else ''}")
-        pool_size = opt.encoder_dim * opt.num_clusters
-        gallery_features = np.empty((len(eval_set), pool_size), dtype="float32")
+        features_dim = opt.encoder_dim * opt.num_clusters
+        gallery_features = np.empty((len(eval_set), features_dim), dtype="float32")
         
         for inputs, indices in tqdm(test_dataloader, ncols=100):
             inputs = inputs.to(opt.device)
@@ -26,9 +26,13 @@ def test(opt, eval_set, model):
     query_features = gallery_features[eval_set.db_struct.num_gallery:]
     gallery_features = gallery_features[:eval_set.db_struct.num_gallery]
     
-    faiss_index = faiss.IndexFlatL2(pool_size)
+    faiss_index = faiss.IndexFlatL2(features_dim)
     faiss_index.add(gallery_features)
     
+    del gallery_features
+    if opt.faiss_gpu:
+        faiss_index = faiss.index_cpu_to_gpu(faiss.StandardGpuResources(), 0, faiss_index)
+     
     logging.debug("Calculating recalls")
     
     _, predictions = faiss_index.search(query_features, 20)
