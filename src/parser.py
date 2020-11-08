@@ -26,9 +26,9 @@ def parse_arguments():
                         help="pretrained to use")
     parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"])
     parser.add_argument("--attention", action="store_true", help="Use attention mechanism")
-    parser.add_argument("--epoch_divider", type=int, default=4, 
+    parser.add_argument("--epoch_divider", type=int, default=5, 
                         help="Divide a train epoch in epoch_divider parts. Useful with huge datasets")
-    parser.add_argument("--num_workers", type=int, default=8, help="num_workers for all dataloaders")
+    parser.add_argument("--num_workers", type=int, default=6, help="num_workers for all dataloaders")
     parser.add_argument("--grl", action="store_true", help="Use Gradient Reversal Layer (GRL)")
     parser.add_argument("--grl_batch_size", type=int, default=8, help="Batch size for GRL")
     parser.add_argument("--grl_loss_weight", type=float, default=0.1, help="Weight for GRL loss")

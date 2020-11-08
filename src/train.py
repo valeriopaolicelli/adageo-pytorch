@@ -1,4 +1,5 @@
 
+import h5py
 import logging
 import math
 import numpy as np
@@ -11,8 +12,8 @@ from datetime import datetime
 import datasets
 
 
-def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
-                    whole_train_set, query_train_set, grl_dataset):
+def train(opt, epoch, model, optimizer, criterion_netvlad, whole_train_set,
+          query_train_set, grl_dataset):
     
     epoch_start_time = datetime.now()
     epoch_loss = 0
@@ -54,18 +55,16 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
                 inputs = inputs.to(opt.device)
                 vlad_encoding = model(inputs)
                 cache[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy()
-                del inputs, vlad_encoding
-        
-        query_train_set.cache = cache
-        del cache
+        with h5py.File(f"{opt.output_folder}/cache.hdf5", mode='w') as h5: 
+            h5.create_dataset("cache", data=cache, dtype=np.float32)
+        del inputs, vlad_encoding, cache
         
         sub_query_train_set = Subset(dataset=query_train_set, indices=subset_indexes[sub_iter][:opt.cache_refresh_rate])
         
-        query_dataloader = DataLoader(dataset=sub_query_train_set, num_workers=0,
+        query_dataloader = DataLoader(dataset=sub_query_train_set, num_workers=opt.num_workers,
                                        batch_size=opt.batch_size, shuffle=False,
                                        collate_fn=datasets.collate_fn, pin_memory=use_cuda)
         
-        # TRAIN
         model.train()
         for query, positives, negatives, neg_counts, indices in tqdm(query_dataloader, ncols=100):
             effective_iterations += 1
@@ -111,9 +110,6 @@ def elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad,
                       f"current batch triplet loss = {batch_loss:.4f}, " +
                       f"average epoch triplet loss = {epoch_loss / (effective_iterations):.4f}")
         if opt.grl: logging.debug(f"Average grl epoch loss: {epoch_grl_loss / effective_iterations:.4f}")
-        
-        del query_dataloader
-        del query_train_set.cache
     
     logging.info(f"Finished epoch {epoch:02d} in {str(datetime.now() - epoch_start_time)[:-7]}: "
                  f"average epoch triplet loss = {epoch_loss / effective_iterations:.4f}")

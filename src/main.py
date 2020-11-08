@@ -42,7 +42,7 @@ else:
 ######################################### DATASETS #########################################
 logging.debug(f"Loading dataset(s) {opt.root_path}")
 
-query_train_set = datasets.QueryDataset(opt.root_path, opt.train_g, opt.train_q)
+query_train_set = datasets.QueryDataset(opt.root_path, opt.train_g, opt.train_q, opt.output_folder)
 logging.info(f"Train query set: {query_train_set.info}")
 
 whole_train_set = datasets.WholeDataset(opt.root_path, opt.train_g, opt.train_q)
@@ -59,15 +59,18 @@ if opt.grl:
 else:
     grl_dataset = None
 
+
+######################################### TRAINING #########################################
 best_score = 0
 not_improved = 0
 for epoch in range(start_epoch, opt.n_epochs):
     
+    # Start each epoch with validation
     recalls, recalls_str = test.test(opt, whole_val_set, model)
     logging.info(f"Recalls on val set {whole_val_set.info}: {recalls_str}")
     
     if recalls[5] > best_score:
-        logging.info(f"Improved: previous best recall@5 = {best_score:.4f}, current best recall@5 = {recalls[5]:.4f}")
+        logging.info(f"Improved: previous best recall@5 = {best_score * 100:.1f}, current best recall@5 = {recalls[5] * 100:.1f}")
         is_best = True
         best_score = recalls[5]
         not_improved = 0
@@ -85,16 +88,16 @@ for epoch in range(start_epoch, opt.n_epochs):
     
     logging.info(f"Start training epoch: {epoch:02d}")
     
-    train.elaborate_epoch(opt, epoch, model, optimizer, criterion_netvlad, 
-                                       whole_train_set, query_train_set, grl_dataset)
+    train.train(opt, epoch, model, optimizer, criterion_netvlad, 
+                whole_train_set, query_train_set, grl_dataset)
 
 
-logging.info(f"Best recall@5: {best_score:.4f}")
+logging.info(f"Best recall@5: {best_score * 100:.1f}")
 logging.info(f"Trained for {epoch:02d} epochs, in total in {str(datetime.now() - start_time)[:-7]}")
 
-model_state_dict = torch.load(os.path.join(opt.output_folder, "best_model.pth"))["state_dict"]
-model.load_state_dict(model_state_dict)
-model = model.to(opt.device) # TODO necessario ???
+######################################### TEST on TEST SET #########################################
+best_model_state_dict = torch.load(os.path.join(opt.output_folder, "best_model.pth"))["state_dict"]
+model.load_state_dict(best_model_state_dict)
 
 recalls, recalls_str  = test.test(opt, whole_test_set, model)
 logging.info(f"Recalls on {whole_test_set.info}: {recalls_str}")

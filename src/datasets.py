@@ -1,4 +1,5 @@
 
+import h5py
 import itertools
 import torch
 import torch.utils.data as data
@@ -95,8 +96,9 @@ class QueryDataset(data.Dataset):
     mentre con collate_fn ritorna:
         query, positive, negatives, neg_counts, indices
     """
-    def __init__(self, root_path, gallery_path, query_path):
+    def __init__(self, root_path, gallery_path, query_path, output_folder):
         super().__init__()
+        self.output_folder = output_folder
         self.transform = transform()
         self.margin = 0.1
         self.db_struct = parse_db_struct(root_path, gallery_path, query_path)
@@ -126,30 +128,30 @@ class QueryDataset(data.Dataset):
         self.neg_cache = [np.empty((0,)) for _ in range(self.db_struct.num_queries)]
         self.info = f"< queries: {query_path} ({self.db_struct.num_queries}); gallery: {gallery_path} ({self.db_struct.num_gallery}) >"
     def __getitem__(self, index):
-        index = self.queries[index]  # re-map index to match dataset
-        ###############################################################
-        # Start reading features whole train set (cache)
-        q_offset = self.db_struct.num_gallery
-        query_features = self.cache[index + q_offset]
-        if np.all(query_features==0):
-            raise Exception(f"For query {self.db_struct.query_images[index]} with index {index} " +
-                            "all features are set to 0!!! You didn't compute them!" + 
-                            "PLEASE NOTE: this error might be due to the fact that in QueryDataset there are "+
-                            "less queries compared to WholeDataset, therefore indexes do not match!!!" + 
-                            "You can find the code to remove trainig queries from the dataset at the bottom of this file.")
-        pos_features = self.cache[self.nontrivial_positives[index].tolist()]
-        pool_size = self.cache.shape[1]
-        faiss_index = faiss.IndexFlatL2(pool_size)
-        faiss_index.add(pos_features)
-        dist_pos, pos_nums = faiss_index.search(query_features.reshape(1, -1), 1)
-        dist_pos = dist_pos.item()
-        pos_index = self.nontrivial_positives[index][pos_nums[0]].item()
-        neg_sample = np.random.choice(self.potential_negatives[index], self.n_neg_sample)
-        neg_sample = np.unique(np.concatenate([self.neg_cache[index], neg_sample]))
-        feat_len = self.cache.shape[1]
-        neg_features = np.zeros((len(neg_sample.tolist()), feat_len), dtype=np.float32)
-        for idx, neg_feature in enumerate(neg_sample.tolist()):
-            neg_features[idx] = self.cache[int(neg_feature)]
+        with h5py.File(f"{self.output_folder}/cache.hdf5", mode='r') as h5: 
+            cache = h5.get("cache")
+            index = self.queries[index] # re-map index to match dataset
+            q_offset = self.db_struct.num_gallery
+            query_features = cache[index + q_offset]
+            if np.all(query_features==0):
+                raise Exception(f"For query {self.db_struct.query_images[index]} with index {index} " +
+                                "all features are set to 0!!! You didn't compute them!" + 
+                                "PLEASE NOTE: this error might be due to the fact that in QueryDataset there are "+
+                                "less queries compared to WholeDataset, therefore indexes do not match!!!" + 
+                                "You can find the code to remove trainig queries from the dataset at the bottom of this file.")
+            pos_features = cache[self.nontrivial_positives[index].tolist()]
+            pool_size = cache.shape[1]
+            faiss_index = faiss.IndexFlatL2(pool_size)
+            faiss_index.add(pos_features)
+            dist_pos, pos_nums = faiss_index.search(query_features.reshape(1, -1), 1)
+            dist_pos = dist_pos.item()
+            pos_index = self.nontrivial_positives[index][pos_nums[0]].item()
+            neg_sample = np.random.choice(self.potential_negatives[index], self.n_neg_sample)
+            neg_sample = np.unique(np.concatenate([self.neg_cache[index], neg_sample]))
+            feat_len = cache.shape[1]
+            neg_features = np.zeros((len(neg_sample.tolist()), feat_len), dtype=np.float32)
+            for idx, neg_feature in enumerate(neg_sample.tolist()):
+                neg_features[idx] = cache[int(neg_feature)]
         faiss_index = faiss.IndexFlatL2(pool_size)
         faiss_index.add(neg_features)
         dist_neg, neg_nums = faiss_index.search(query_features.reshape(1, -1), self.n_neg * 10)
@@ -157,12 +159,10 @@ class QueryDataset(data.Dataset):
         neg_nums = neg_nums.reshape(-1)
         violating_neg = (dist_neg ** 0.5) < (dist_pos ** 0.5) + (self.margin ** 0.5)
         if np.sum(violating_neg) < 1:
-            # if none are violating then skip this query
-            return None
+            return None # if none are violating then skip this query
         neg_nums = neg_nums[violating_neg][:self.n_neg]
         neg_indices = neg_sample[neg_nums].astype(np.int32)
         self.neg_cache[index] = neg_indices
-        # End reading features whole train set (cache)
         query = Image.open(self.db_struct.query_images[index])
         positive = Image.open(self.db_struct.gallery_images[pos_index])
         query = self.transform(query)

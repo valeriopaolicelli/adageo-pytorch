@@ -9,6 +9,10 @@ import traceback
 
 
 def make_deterministic(seed=0):
+    # Make results deterministic. If seed == -1, do not make deterministic.
+    # Running the script in a deterministic way might slow it down.
+    if seed == -1:
+        return
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
