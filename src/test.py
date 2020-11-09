@@ -7,18 +7,18 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-def test(opt, eval_set, model):
-    test_dataloader = DataLoader(dataset=eval_set, num_workers=opt.num_workers, 
-                                 batch_size=opt.cache_batch_size, pin_memory=True)
+def test(args, eval_set, model):
+    test_dataloader = DataLoader(dataset=eval_set, num_workers=args.num_workers, 
+                                 batch_size=args.cache_batch_size, pin_memory=True)
     
     model.eval()
     with torch.no_grad():
-        logging.debug(f"Extracting Features {'weighted' if opt.attention else ''}")
-        features_dim = opt.encoder_dim * opt.num_clusters
+        logging.debug(f"Extracting Features {'weighted' if args.attention else ''}")
+        features_dim = args.encoder_dim * args.num_clusters
         gallery_features = np.empty((len(eval_set), features_dim), dtype="float32")
         
         for inputs, indices in tqdm(test_dataloader, ncols=100):
-            inputs = inputs.to(opt.device)
+            inputs = inputs.to(args.device)
             vlad_encoding = model(inputs)
             gallery_features[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy()
             del inputs, vlad_encoding
@@ -30,7 +30,7 @@ def test(opt, eval_set, model):
     faiss_index.add(gallery_features)
     
     del gallery_features
-    if opt.faiss_gpu:
+    if args.faiss_gpu:
         faiss_index = faiss.index_cpu_to_gpu(faiss.StandardGpuResources(), 0, faiss_index)
      
     logging.debug("Calculating recalls")

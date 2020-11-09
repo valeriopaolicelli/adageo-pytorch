@@ -144,8 +144,7 @@ class QueryDataset(data.Dataset):
             best_pos_dist = best_pos_dist.item()
             best_pos_index = self.positives_per_query[index][best_pos_num[0]].item()
             # Sample 1000 negatives randomly and concatenate them with the previous top 10 negatives (neg_cache)
-            # TODO set False
-            neg_samples = np.random.choice(self.negatives_per_query[index], self.n_neg_samples, replace=True)
+            neg_samples = np.random.choice(self.negatives_per_query[index], self.n_neg_samples, replace=False)
             neg_samples = np.unique(np.concatenate([self.neg_cache[index], neg_samples]))
             neg_features = np.array([cache[int(neg_sample)] for neg_sample in neg_samples])
         

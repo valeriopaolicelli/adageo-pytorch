@@ -21,13 +21,12 @@ def make_deterministic(seed=0):
     torch.backends.cudnn.benchmark = False
 
 
-def setup_logging(output_folder, exist_ok=False, console="debug",
+def setup_logging(output_folder, console="debug",
                   info_filename="info.log", debug_filename="debug.log"):
     """Set up logging files and console output.
     Creates one file for INFO logs and one for DEBUG logs.
     Args:
         output_folder (str): creates the folder where to save the files.
-        exist_ok (boolean): if False throw a FileExistsError if output_folder already exists
         debug (str):
             if == "debug" prints on console debug messages and higher
             if == "info"  prints on console info messages and higher
@@ -35,7 +34,7 @@ def setup_logging(output_folder, exist_ok=False, console="debug",
         info_filename (str): the name of the info file. if None, don't create info file
         debug_filename (str): the name of the debug file. if None, don't create debug file
     """
-    if not exist_ok and os.path.exists(output_folder):
+    if os.path.exists(output_folder):
         raise FileExistsError(f"{output_folder} esiste già !!!")
     os.makedirs(output_folder, exist_ok=True)
     base_formatter = logging.Formatter("%(asctime)s   %(message)s", "%Y-%m-%d %H:%M:%S")
