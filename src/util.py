@@ -89,8 +89,8 @@ def build_model(args):
     model = network.AttenNetVLAD(backbone, netvlad_layer, grl_discriminator, attention=args.attention)
     
     if not args.resume:
-        cluster_set = datasets.WholeDataset(args.root_path, args.train_g, args.train_q)
-        logging.debug(f"Compute clustering and initialize NetVLAD layer based on {cluster_set.info}")
+        cluster_set = datasets.WholeDataset(args.dataset_root, args.train_g, args.train_q)
+        logging.debug(f"Compute clustering and initialize NetVLAD layer based on {cluster_set}")
         centroids, descriptors = get_clusters(args, cluster_set, model)
         model.netvlad_layer.init_params(centroids, descriptors)
     
