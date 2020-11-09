@@ -44,7 +44,7 @@ grl_transform = transforms.Compose([
     ])
 
 class GrlDataset(torch.utils.data.Dataset):
-    def __init__(self, root_path, datasets_paths, length=1000000):
+    def __init__(self, dataset_root, datasets_paths, length=1000000):
         """
         datasets_paths is a list containing the folders which contain the N datasets.
         __len__() returns 1000000, and __getitem__(index) returns a random
@@ -56,7 +56,7 @@ class GrlDataset(torch.utils.data.Dataset):
         logging.info(f"GrlDataset has {self.num_classes} classes")
         self.images_paths = []
         for dataset_path in datasets_paths:
-            self.images_paths.append(sorted(glob.glob(f"{root_path}/{dataset_path}/**/*.jpg", recursive=True)))
+            self.images_paths.append(sorted(glob.glob(f"{dataset_root}/{dataset_path}/**/*.jpg", recursive=True)))
             logging.info(f"    Class {dataset_path} has {len(self.images_paths[-1])} images")
             if len(self.images_paths[-1]) == 0:
                 raise Exception(f"Class {dataset_path} has 0 images, that's a problem!!!")

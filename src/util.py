@@ -5,7 +5,6 @@ from math import ceil
 from torch.utils.data import DataLoader, SubsetRandomSampler, Subset
 import numpy as np
 import faiss
-from os.path import join
 import shutil
 import torch
 import torch.nn.functional as F
@@ -18,11 +17,11 @@ import datasets
 
 
 def save_checkpoint(args, state, is_best, filename):
-    os.makedirs(join(args.output_folder, "models"), exist_ok=True)
-    model_path = join(args.output_folder, "models", filename)
+    os.makedirs(f"{args.output_folder}/models", exist_ok=True)
+    model_path = f"{args.output_folder}/models/{filename}"
     torch.save(state, model_path)
     if is_best:
-        shutil.copyfile(model_path, join(args.output_folder, "best_model.pth"))
+        shutil.copyfile(model_path, f"{args.output_folder}/best_model.pth")
 
 
 def resume_train(args, model, optimizer):

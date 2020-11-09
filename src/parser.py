@@ -34,9 +34,7 @@ def parse_arguments():
     parser.add_argument("--grl_batch_size", type=int, default=8, help="Batch size for GRL")
     parser.add_argument("--grl_loss_weight", type=float, default=0.1, help="Weight for GRL loss")
     # PATHS
-    parser.add_argument("--all_datasets_path", type=str, default="/home/valerio/datasets", 
-                        help="Path containg all datasets")
-    parser.add_argument("--root_path", type=str, default="oxford60k/image", help="Root of the dataset")
+    parser.add_argument("--dataset_root", type=str, default="/home/valerio/datasets/oxford60k/image", help="Root path of the dataset")
     parser.add_argument("--train_g", type=str, default="train/gallery", help="Path train gallery")
     parser.add_argument("--train_q", type=str, default="train/queries", help="Path train query")
     parser.add_argument("--val_g", type=str, default="val/gallery", help="Path val gallery")
