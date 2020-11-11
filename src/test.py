@@ -13,7 +13,7 @@ def test(args, eval_set, model):
     
     model.eval()
     with torch.no_grad():
-        logging.debug(f"Extracting Features {'weighted' if args.attention else ''}")
+        logging.debug(f"Extracting {'attentive ' if args.attention else ''}features ")
         features_dim = args.encoder_dim * args.num_clusters
         gallery_features = np.empty((len(eval_set), features_dim), dtype="float32")
         

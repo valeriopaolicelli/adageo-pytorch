@@ -79,7 +79,7 @@ for epoch in range(start_epoch, args.n_epochs):
     
     util.save_checkpoint(args, {"epoch": epoch, "state_dict": model.state_dict(),
         "recalls": recalls, "best_score": best_score, "optimizer": optimizer.state_dict(),
-    }, is_best, filename=f"model_{epoch:02d}")
+    }, is_best, filename=f"model_{epoch:02d}.pth")
     
     logging.info(f"Start training epoch: {epoch:02d}")
     
