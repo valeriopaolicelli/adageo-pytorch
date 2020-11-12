@@ -26,3 +26,12 @@ Using our dataset paths management, you only need to decide the SCENARIO (int va
 Test model for a certain target SCENARIO:  
 `python eval.py --expName=<what you want> --resume=<path to trained model> --ckpt=best --attention --testQ=test/queries_{SCENARIO}`  
   
+
+@misc{berton2020adaptiveattentive,
+    title={Adaptive-Attentive Geolocalization from few queries: a hybrid approach},
+    author={Gabriele Moreno Berton and Valerio Paolicelli and Carlo Masone and Barbara Caputo},
+    year={2020},
+    eprint={2010.06897},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
+}
