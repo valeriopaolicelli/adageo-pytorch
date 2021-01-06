@@ -30,11 +30,11 @@ Test model for a certain target SCENARIO:
 `python eval.py --expName=<what you want> --resume=<path to trained model> --ckpt=best --attention --testQ=test/queries_{SCENARIO}`  
   
 
-@misc{berton2020adaptiveattentive,  
-              title={Adaptive-Attentive Geolocalization from few queries: a hybrid approach},   
-              author={Gabriele Moreno Berton and Valerio Paolicelli and Carlo Masone and Barbara Caputo},  
-              year={2020},   
-              eprint={2010.06897},   
-              archivePrefix={arXiv},   
-              primaryClass={cs.CV}  
-             }
+@InProceedings{Berton_2021_WACV,
+    author    = {Berton, Gabriele Moreno and Paolicelli, Valerio and Masone, Carlo and Caputo, Barbara},
+    title     = {Adaptive-Attentive Geolocalization From Few Queries: A Hybrid Approach},
+    booktitle = {Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+    month     = {January},
+    year      = {2021},
+    pages     = {2918-2927}
+}
