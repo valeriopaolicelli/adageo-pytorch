@@ -5,6 +5,7 @@
 Pytorch code of AdAGeo - WACV2021
 
 Arxiv paper: https://arxiv.org/abs/2010.06897 in WACV2021 proceedings.
+  
 Short presentation: https://www.youtube.com/watch?v=URQCLkDIygM
 
 ![Architecture](architecture.jpg)
