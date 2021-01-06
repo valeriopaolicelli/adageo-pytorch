@@ -4,7 +4,8 @@
 
 Pytorch code of AdAGeo - WACV2021
 
-Arxiv paper: https://arxiv.org/abs/2010.06897 accepted at WACV2021
+Arxiv paper: https://arxiv.org/abs/2010.06897 in WACV2021 proceedings.
+Short presentation: https://www.youtube.com/watch?v=URQCLkDIygM
 
 ![Architecture](architecture.jpg)
 
@@ -29,7 +30,7 @@ Using our dataset paths management, you only need to decide the SCENARIO (int va
 Test model for a certain target SCENARIO:  
 `python eval.py --expName=<what you want> --resume=<path to trained model> --ckpt=best --attention --testQ=test/queries_{SCENARIO}`  
   
-
+BibTex:
 @InProceedings{Berton_2021_WACV,
     author    = {Berton, Gabriele Moreno and Paolicelli, Valerio and Masone, Carlo and Caputo, Barbara},
     title     = {Adaptive-Attentive Geolocalization From Few Queries: A Hybrid Approach},
