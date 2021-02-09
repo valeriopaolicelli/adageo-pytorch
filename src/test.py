@@ -37,24 +37,18 @@ def test(args, eval_set, model):
     
     _, predictions = faiss_index.search(query_features, 20)
     
-    ground_truths = eval_set.getPositives()
+    ground_truths = eval_set.get_positives()
     
     n_values = [1, 5, 10, 20]
     
-    correct_at_n = np.zeros(len(n_values))
+    recalls = np.zeros(len(n_values))
     for query_index, pred in enumerate(predictions):
         for i, n in enumerate(n_values):
             if np.any(np.in1d(pred[:n], ground_truths[query_index])):
-                correct_at_n[i:] += 1
+                recalls[i:] += 1
                 break
     
-    recall_at_n = correct_at_n / eval_set.db_struct.num_queries
-    
-    recalls = {} # make dict for output
-    recalls_str = ""
-    for i, n in enumerate(n_values):
-        recalls[n] = recall_at_n[i]
-        recalls_str += f"{recall_at_n[i] * 100:.1f} \t"
-    
-    return recalls, recalls_str.replace(".", ",")
+    recalls = recalls / eval_set.db_struct.num_queries * 100
+    recalls_str = ", ".join([f"R@{val}: {rec:.1f}" for val, rec in zip(n_values, recalls)])
+    return recalls, recalls_str
 

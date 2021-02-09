@@ -32,7 +32,7 @@ def resume_train(args, model, optimizer):
     best_score = checkpoint["best_score"]
     optimizer.load_state_dict(checkpoint["optimizer"])
     logging.debug(f"Loaded checkpoint: start_epoch = {start_epoch}, " \
-                  f"current_best_recall@5 = {best_score}")
+                  f"current_best_R@5 = {best_score:.1f}")
     return model, optimizer, best_score, start_epoch
 
 
@@ -76,7 +76,7 @@ def build_model(args):
     for name, child in backbone.named_children():
         if name == "layer3":
             break
-        for name2, params in child.named_parameters():
+        for params in child.parameters():
             params.requires_grad = False
     
     netvlad_layer = network.NetVLAD(num_clusters=args.num_clusters, dim=args.encoder_dim)

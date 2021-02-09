@@ -64,10 +64,10 @@ for epoch in range(start_epoch, args.n_epochs):
     recalls, recalls_str = test.test(args, whole_val_set, model)
     logging.info(f"Recalls on val set {whole_val_set}: {recalls_str}")
     
-    if recalls[5] > best_score:
-        logging.info(f"Improved: previous best recall@5 = {best_score * 100:.1f}, current recall@5 = {recalls[5] * 100:.1f}")
+    if recalls[1] > best_score:
+        logging.info(f"Improved: previous best R@5 = {best_score:.1f}, current R@5 = {recalls[1]:.1f}")
         is_best = True
-        best_score = recalls[5]
+        best_score = recalls[1]
         not_improved = 0
     else:
         is_best = False
@@ -75,7 +75,7 @@ for epoch in range(start_epoch, args.n_epochs):
             logging.info(f"Performance did not improve for {not_improved} epochs. Stop training.")
             break
         not_improved += 1
-        logging.info(f"Not improved: {not_improved} / {args.patience}: best recall@5 = {best_score * 100:.1f}, current recall@5 = {recalls[5] * 100:.1f}")
+        logging.info(f"Not improved: {not_improved} / {args.patience}: best R@5 = {best_score:.1f}, current R@5 = {recalls[1]:.1f}")
     
     util.save_checkpoint(args, {"epoch": epoch, "state_dict": model.state_dict(),
         "recalls": recalls, "best_score": best_score, "optimizer": optimizer.state_dict(),
@@ -87,7 +87,7 @@ for epoch in range(start_epoch, args.n_epochs):
                 whole_train_set, query_train_set, grl_dataset)
 
 
-logging.info(f"Best recall@5: {best_score * 100:.1f}")
+logging.info(f"Best R@5: {best_score:.1f}")
 logging.info(f"Trained for {epoch:02d} epochs, in total in {str(datetime.now() - start_time)[:-7]}")
 
 ######################################### TEST on TEST SET #########################################

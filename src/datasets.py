@@ -62,7 +62,7 @@ class WholeDataset(data.Dataset):
         return len(self.images)
     def __str__(self):
         return self.info
-    def getPositives(self):
+    def get_positives(self):
         return self.positives_per_query
 
 
@@ -135,10 +135,10 @@ class QueryDataset(data.Dataset):
             cache = h5.get("cache")
             features_dim = cache.shape[1]
             queries_offset = self.db_struct.num_gallery
-            query_features = cache[index + queries_offset]
+            query_features = cache[index + queries_offset].astype(np.float32)
             if np.all(query_features==0):
                 raise Exception(f"For query {self.db_struct.query_images[index]} with index {index} features have not been computed!!!")
-            positives_features = cache[self.positives_per_query[index].tolist()]
+            positives_features = cache[self.positives_per_query[index].tolist()].astype(np.float32)
             faiss_index = faiss.IndexFlatL2(features_dim)
             faiss_index.add(positives_features)
             # Search the best positive (within 10 meters AND nearest in features space)
@@ -148,7 +148,7 @@ class QueryDataset(data.Dataset):
             # Sample 1000 negatives randomly and concatenate them with the previous top 10 negatives (neg_cache)
             neg_samples = np.random.choice(self.negatives_per_query[index], self.n_neg_samples)
             neg_samples = np.unique(np.concatenate([self.neg_cache[index], neg_samples]))
-            neg_features = np.array([cache[int(neg_sample)] for neg_sample in neg_samples])
+            neg_features = np.array([cache[int(neg_sample)] for neg_sample in neg_samples]).astype(np.float32)
         
         faiss_index = faiss.IndexFlatL2(features_dim)
         faiss_index.add(neg_features)
