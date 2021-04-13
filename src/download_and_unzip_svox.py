@@ -4,7 +4,7 @@ import shutil
 import requests
 
 def download_file_from_google_drive(zip_destination="svox.zip",
-                                    file_id="1S3RreRlBL7c7QSCf6NglGTAUVdg_5bZe"):
+                                    file_id="16iuk8voW65GaywNUQlWAbDt6HZzAJ_t9"):
     def get_confirm_token(response):
         for key, value in response.cookies.items():
             if key.startswith('download_warning'):
@@ -32,6 +32,6 @@ def download_and_unzip_svox(dataset_destination="datasets",
     if delete_zip:
         os.remove(zip_destination)
 
-if __file__ == "__main__":
+if __name__ == "__main__":
     download_and_unzip_svox()
 
