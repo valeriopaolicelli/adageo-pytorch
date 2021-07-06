@@ -1,2 +1,6 @@
 src/__pycache__/*
 src/.spyproject
+src/datasets
+src/*.tar
+src/runs
+tmp
