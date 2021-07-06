@@ -36,12 +36,12 @@ for target in targets:
 
         # Map each source image into target domain
         # for source_img in os.listdir(src_q_path):
-        for i in range(10):
+        for i in range(2):
             src_img = Image.open(os.path.join(src_q_path, source_images[i]))
             trg_img = Image.open(os.path.join(trg_q_path, random.choice(target_imgs)))
-            src_img_np = np.array(src_img, dtype=np.uint8)
-            trg_img_np = np.array(trg_img, dtype=np.uint8)
+            src_img_np = np.array(src_img, dtype=int)
+            trg_img_np = np.array(trg_img, dtype=int)
             src_in_trg_img = FDA_source_to_target_np(src_img_np, trg_img_np, args.beta)
 
             # Store the transformed image
-            Image.fromarray(src_in_trg_img).save(os.path.join(output_path, source_images[i]))
+            Image.fromarray(np.abs(src_in_trg_img).astype(np.uint8)).save(os.path.join(output_path, source_images[i]))

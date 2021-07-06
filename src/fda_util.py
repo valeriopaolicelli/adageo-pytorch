@@ -41,7 +41,7 @@ def FDA_source_to_target_np(src_img, trg_img, L=0.1 ):
     src_in_trg = np.fft.ifft2( fft_src_, axes=(-2, -1) )
     src_in_trg = np.real(src_in_trg)
 
-    return np.transpose(src_in_trg, (1, 2, 0)).astype(np.uint8)
+    return np.transpose(src_in_trg, (1, 2, 0)).astype(int)
 
 
 def low_freq_mutate_np( amp_src, amp_trg, L=0.1 ):
@@ -49,6 +49,7 @@ def low_freq_mutate_np( amp_src, amp_trg, L=0.1 ):
     a_trg = np.fft.fftshift( amp_trg, axes=(-2, -1) )
 
     _, h, w = a_src.shape
+
     b = (  np.floor(np.amin((h,w))*L) / 2 ).astype(int)
     c_h = np.floor(h/2.0).astype(int)
     c_w = np.floor(w/2.0).astype(int)
@@ -92,13 +93,16 @@ if __name__ == '__main__':
     trg_img = np.array(Image.open(trg_img_path), dtype=int)
 
     # Pass images to the function
-    src_to_trg_img = FDA_source_to_target_np(src_img, trg_img, L=0.01)
+    src_to_trg_img = FDA_source_to_target_np(src_img, trg_img, L=.005)
 
     # Plot source image before and after
-    fig, ax = plt.subplots(1, 2)
+    fig, ax = plt.subplots(1, 3)
     ax[0].imshow(src_img)
-    ax[1].imshow(src_to_trg_img.astype(int))
+    ax[1].imshow(src_to_trg_img)
+    ax[2].imshow(np.abs(src_to_trg_img))
+    print(np.sum(np.abs(src_to_trg_img).astype(np.uint8)))
 
     plt.show()
+    Image.fromarray(src_to_trg_img.astype(np.uint8))
 
     # fig.savefig("../tmp/test.jpg")
