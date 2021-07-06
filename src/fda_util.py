@@ -1,4 +1,5 @@
 import numpy as np
+import argparse
 from math import floor
 
 # TODO Remove after testing
@@ -6,7 +7,7 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
 
-def FDA_source_to_target_np( src_img, trg_img, L=0.1 ):
+def FDA_source_to_target_np(src_img, trg_img, L=0.1 ):
     """
     Args:
     src_img (np.array): numpy representation of 3xHxW image from source domain
@@ -40,7 +41,7 @@ def FDA_source_to_target_np( src_img, trg_img, L=0.1 ):
     src_in_trg = np.fft.ifft2( fft_src_, axes=(-2, -1) )
     src_in_trg = np.real(src_in_trg)
 
-    return np.transpose(src_in_trg, (1, 2, 0))
+    return np.transpose(src_in_trg, (1, 2, 0)).astype(np.uint8)
 
 
 def low_freq_mutate_np( amp_src, amp_trg, L=0.1 ):
@@ -62,10 +63,27 @@ def low_freq_mutate_np( amp_src, amp_trg, L=0.1 ):
     
     return a_src
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="FDA", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument(
+        "--target_size", type=str, default = "1",
+        help = "Number of shots to learn the mapping from source to target"
+    )
+
+    # PATHS
+    parser.add_argument("--dataset_root", type=str, default="./datasets/svox/images", help="Root path of the dataset")
+    parser.add_argument("--train_q", type=str, default="train/queries", help="Path train query")
+    parser.add_argument("--val_q", type=str, default="val/queries", help="Path val query")
+    parser.add_argument("--beta", type=float, default=0.001, help = "Beta hyperparameter")
+    parser.add_argument("--val_beta", default=False, action = "store_true", help="If True validate beta")
+
+    return parser.parse_args()
+
+
+# Run test
 if __name__ == '__main__':
 
-    # Run test
     src_img_path = 'datasets/svox/examples/RobotCar_rain.jpg'
     trg_img_path = 'datasets/svox/examples/RobotCar_snow.jpg'
 
@@ -74,13 +92,13 @@ if __name__ == '__main__':
     trg_img = np.array(Image.open(trg_img_path), dtype=int)
 
     # Pass images to the function
-    src_to_trg_img = FDA_source_to_target_np(src_img, trg_img, L=0.01).astype(int)
+    src_to_trg_img = FDA_source_to_target_np(src_img, trg_img, L=0.01)
 
     # Plot source image before and after
     fig, ax = plt.subplots(1, 2)
     ax[0].imshow(src_img)
-    ax[1].imshow(src_to_trg_img)
+    ax[1].imshow(src_to_trg_img.astype(int))
 
     plt.show()
 
-    fig.savefig("tmp/test_src.jpg")
+    # fig.savefig("../tmp/test.jpg")
