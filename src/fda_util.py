@@ -6,87 +6,81 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
 
-def src_to_target_np(src_img, trg_img, beta = 0.1):
+def FDA_source_to_target_np( src_img, trg_img, L=0.1 ):
     """
     Args:
     src_img (np.array): numpy representation of 3xHxW image from source domain
     trg_img (np.array): numpy representation of 3xHxW image from target domain
-    beta: scalar in [0, 1]. For beta = 0, src amplitudes stays uncchanged.
-          For beta = 1, src amplitudes fully substituted with target amplitudes.
+    L: scalar in [0, 1]. For L = 0, src amplitudes stays unchanged.
+          For L = 1, src amplitudes fully substituted with target amplitudes.
           See https://arxiv.org/pdf/2004.05498.pdf for details
     
     Return: 
     Source image with target low frequencies applied to source
     """
 
-    # 2D Fourier Transform
-    src_ft = np.fft.fft2(src_img)
-    trg_ft = np.fft.fft2(trg_img)
+    src_img_np = np.transpose(src_img, (2, 0, 1)) #.cpu().numpy()
+    trg_img_np = np.transpose(trg_img, (2, 0, 1)) #.cpu().numpy()
 
-    # Separate amplitudes and phases
-    src_amp, src_phase = np.abs(src_ft), np.angle(src_ft)
-    trg_amp, trg_phase = np.abs(trg_ft), np.angle(trg_ft)
+    # get fft of both source and target
+    fft_src_np = np.fft.fft2( src_img_np, axes=(-2, -1) )
+    fft_trg_np = np.fft.fft2( trg_img_np, axes=(-2, -1) )
 
-    replaced_src_amp = replace_low_freq_np(src_amp, trg_amp, beta)
+    # extract amplitude and phase of both ffts
+    amp_src, pha_src = np.abs(fft_src_np), np.angle(fft_src_np)
+    amp_trg, pha_trg = np.abs(fft_trg_np), np.angle(fft_trg_np)
 
-    # Recompose source FT with replace low level frequencies
-    src_ft = replaced_src_amp * np.exp(1j*src_phase)
+    # mutate the amplitude part of source with target
+    amp_src_ = low_freq_mutate_np( amp_src, amp_trg, L=L )
+
+    # mutated fft of source
+    fft_src_ = amp_src_ * np.exp( 1j * pha_src )
+
+    # get the mutated image
+    src_in_trg = np.fft.ifft2( fft_src_, axes=(-2, -1) )
+    src_in_trg = np.real(src_in_trg)
+
+    return np.transpose(src_in_trg, (1, 2, 0))
+
+
+def low_freq_mutate_np( amp_src, amp_trg, L=0.1 ):
+    a_src = np.fft.fftshift( amp_src, axes=(-2, -1) )
+    a_trg = np.fft.fftshift( amp_trg, axes=(-2, -1) )
+
+    _, h, w = a_src.shape
+    b = (  np.floor(np.amin((h,w))*L) / 2 ).astype(int)
+    c_h = np.floor(h/2.0).astype(int)
+    c_w = np.floor(w/2.0).astype(int)
+
+    h1 = c_h-b
+    h2 = c_h+b+1
+    w1 = c_w-b
+    w2 = c_w+b+1
+
+    a_src[:,h1:h2,w1:w2] = a_trg[:,h1:h2,w1:w2]
+    a_src = np.fft.ifftshift( a_src, axes=(-2, -1) )
     
-
-    # Inverse 2D FT
-    # Loro usano ifftshift - testo differenza.
-    # Con ifftshift permane una parte complessa, dubito che possa essere compatibile con .jpg
-    src_to_trg_img = np.real(np.fft.ifft2(src_ft, axes = (-2, -1))) # np.real rimuove parte complessa, che è odg 1E-16
-
-    return src_to_trg_img
-
-
-def replace_low_freq_np(src_amp, trg_amp, beta):
-    _, h, w = src_amp.shape
-
-    # Center of the image coordinates
-    c_h = floor(h/2)
-    c_w = floor(w/2)
-
-    b = int(beta*floor(min(h, w)) / 2 )
-
-    h1 = c_h - b
-    h2 = c_h + b + 1
-    w1 = c_w - b 
-    w2 = c_w + b + 1
-
-    src_amp[:, h1:h2, w1:w2] = trg_amp[:, h1:h2, w1:w2]
-
-    # Test plot: visualize the replaced region
-    # rectangle = patches.Rectangle((w1, h2), 2*b+1, 2*b+1, facecolor = 'none', linewidth = 1, edgecolor = 'r')
-    # fig, ax = plt.subplots(1, 1)
-    # ax.imshow(src_amp[0, :, :])
-    # ax.add_patch(rectangle)
-
-    # plt.show()
-
-    return src_amp
+    return a_src
 
 
 if __name__ == '__main__':
 
     # Run test
-    src_img_path = '/home/valerio/francesco/adageo-WACV2021/src/datasets/svox/examples/RobotCar_rain.jpg'
-    trg_img_path = '/home/valerio/francesco/adageo-WACV2021/src/datasets/svox/examples/RobotCar_snow.jpg'
+    src_img_path = 'datasets/svox/examples/RobotCar_rain.jpg'
+    trg_img_path = 'datasets/svox/examples/RobotCar_snow.jpg'
 
     # Read images in numpy array
-    src_img = np.array(Image.open(src_img_path), dtype=float)
-    trg_img = np.array(Image.open(trg_img_path), dtype=float)
+    src_img = np.array(Image.open(src_img_path), dtype=int)
+    trg_img = np.array(Image.open(trg_img_path), dtype=int)
 
     # Pass images to the function
-    src_to_trg_img = src_to_target_np(src_img, trg_img, beta = 0.5)
+    src_to_trg_img = FDA_source_to_target_np(src_img, trg_img, L=0.01).astype(int)
 
     # Plot source image before and after
     fig, ax = plt.subplots(1, 2)
     ax[0].imshow(src_img)
     ax[1].imshow(src_to_trg_img)
 
-    np.save("../tmp/test_src.npy", src_img.astype(int))
-    np.save("../tmp/test_src2trg.npy", src_to_trg_img.astype(int))
+    plt.show()
 
-    fig.savefig("../tmp/test_src.jpg")
+    fig.savefig("tmp/test_src.jpg")
