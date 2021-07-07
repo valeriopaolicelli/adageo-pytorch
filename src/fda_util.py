@@ -76,7 +76,7 @@ def parse_arguments():
     parser.add_argument("--dataset_root", type=str, default="./datasets/svox/images", help="Root path of the dataset")
     parser.add_argument("--train_q", type=str, default="train/queries", help="Path train query")
     parser.add_argument("--val_q", type=str, default="val/queries", help="Path val query")
-    parser.add_argument("--beta", type=float, default=0.001, help = "Beta hyperparameter")
+    parser.add_argument("--beta", type=float, default=0.01, help = "Beta hyperparameter")
     parser.add_argument("--val_beta", default=False, action = "store_true", help="If True validate beta")
 
     return parser.parse_args()
