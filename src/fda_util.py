@@ -81,6 +81,15 @@ def parse_arguments():
 
     return parser.parse_args()
 
+def scale(np_img, cmin=0., cmax=255., low=0., high=255.):
+    cscale = cmax - cmin
+    scale = float(high - low) / cscale
+    bytedata = (np_img * 1.0 - cmin) * scale + 0.4999
+    bytedata[bytedata > high] = high
+    bytedata[bytedata < 0] = 0
+    return np.cast[np.uint8](bytedata) + np.cast[np.uint8](low)
+
+
 
 # Run test
 if __name__ == '__main__':
@@ -100,9 +109,8 @@ if __name__ == '__main__':
     ax[0].imshow(src_img)
     ax[1].imshow(src_to_trg_img)
     ax[2].imshow(np.abs(src_to_trg_img))
-    print(np.sum(np.abs(src_to_trg_img).astype(np.uint8)))
 
     plt.show()
-    Image.fromarray(src_to_trg_img.astype(np.uint8))
+    Image.fromarray(np.abs(src_to_trg_img.astype(np.uint8)))
 
-    # fig.savefig("../tmp/test.jpg")
+    fig.savefig("../tmp/test.jpg")
