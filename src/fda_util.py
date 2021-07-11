@@ -6,6 +6,7 @@ from math import floor
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+import os
 
 def FDA_source_to_target_np(src_img, trg_img, L=0.1 ):
     """
@@ -113,4 +114,4 @@ if __name__ == '__main__':
     plt.show()
     Image.fromarray(np.abs(src_to_trg_img.astype(np.uint8)))
 
-    fig.savefig("../tmp/test.jpg")
+    # fig.savefig("../tmp/test.jpg")
