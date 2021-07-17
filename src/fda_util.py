@@ -77,8 +77,10 @@ def parse_arguments():
     parser.add_argument("--dataset_root", type=str, default="./datasets/svox/images", help="Root path of the dataset")
     parser.add_argument("--train_q", type=str, default="train/queries", help="Path train query")
     parser.add_argument("--val_q", type=str, default="val/queries", help="Path val query")
-    parser.add_argument("--beta", type=float, default=0.01, help = "Beta hyperparameter")
+    parser.add_argument("--beta", type=float, default=0.001, help = "Beta hyperparameter")
     parser.add_argument("--val_beta", default=False, action = "store_true", help="If True validate beta")
+    parser.add_argument("--targets", nargs = "+", default=["night", "overcast", "rain", "snow", "sun"], help="Domains of adaptation")
+    parser.add_argument("--shots", nargs = "+", default=['1', '5', '20', '50', 'ALL'], help="Number of shots for domain adaptation")
 
     return parser.parse_args()
 
@@ -89,29 +91,3 @@ def scale(np_img, cmin=0., cmax=255., low=0., high=255.):
     bytedata[bytedata > high] = high
     bytedata[bytedata < 0] = 0
     return np.cast[np.uint8](bytedata) + np.cast[np.uint8](low)
-
-
-
-# Run test
-if __name__ == '__main__':
-
-    src_img_path = 'datasets/svox/examples/RobotCar_rain.jpg'
-    trg_img_path = 'datasets/svox/examples/RobotCar_snow.jpg'
-
-    # Read images in numpy array
-    src_img = np.array(Image.open(src_img_path), dtype=int)
-    trg_img = np.array(Image.open(trg_img_path), dtype=int)
-
-    # Pass images to the function
-    src_to_trg_img = FDA_source_to_target_np(src_img, trg_img, L=.005)
-
-    # Plot source image before and after
-    fig, ax = plt.subplots(1, 3)
-    ax[0].imshow(src_img)
-    ax[1].imshow(src_to_trg_img)
-    ax[2].imshow(np.abs(src_to_trg_img))
-
-    plt.show()
-    Image.fromarray(np.abs(src_to_trg_img.astype(np.uint8)))
-
-    # fig.savefig("../tmp/test.jpg")

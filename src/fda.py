@@ -13,12 +13,8 @@ root = args.dataset_root
 train_q = os.path.join(root, args.train_q)
 val_q = os.path.join(root, args.val_q)
 src_q_paths = [train_q, val_q]
-targets = ["night", "overcast", "rain", "snow", "sun"]
-
-shots = ['1', '5', '20', '50', 'ALL']
-
-# TODO: per validation, rifare night_pseudo_1, overcast_pseudo_1 ()ogni immagine è duplicata...
-
+targets = args.targets
+shots = args.shots
 
 ######################################### FDA ###########################################
 if not args.val_beta:
@@ -34,7 +30,7 @@ if not args.val_beta:
                 source_images = sorted(os.listdir(src_q_path))
 
                 # output_folder: root + "/train" or "val" + "/queries/query_{target}_pseudo_{num_shots}"
-                output_path = src_q_path + "_" + target + "_" + "pseudo"  + "_" + num_shots
+                output_path = src_q_path + "_" + target + "_" + "pseudo"  + "_" + num_shots + "_" + str(args.beta)
                 if not os.path.isdir(output_path):
                     os.mkdir(output_path)
 
