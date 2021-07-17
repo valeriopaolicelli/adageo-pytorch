@@ -2,12 +2,6 @@ import numpy as np
 import argparse
 from math import floor
 
-# TODO Remove after testing
-from matplotlib import pyplot as plt
-import matplotlib.patches as patches
-from PIL import Image
-import os
-
 def FDA_source_to_target_np(src_img, trg_img, L=0.1 ):
     """
     Args:
