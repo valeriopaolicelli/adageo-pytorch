@@ -17,7 +17,7 @@ targets = args.targets
 shots = args.shots
 
 ######################################### FDA ###########################################
-if not args.val_beta:
+if not args.tune_beta:
     for num_shots in shots:
         for target in targets:
             # Target queries folder
@@ -57,7 +57,7 @@ else:
         os.mkdir(beta_src_path)
 
 
-    beta_vals = [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.2]
+    beta_vals = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.2]
     val_size = 5 # compare results on val_size num of source images
     src_q_path = train_q
 
@@ -72,7 +72,7 @@ else:
 
             source_images = sorted(os.listdir(src_q_path)) # sorted makes result reproducible
 
-            output_path = os.path.join(valid_imgs_path, "pseudo" + "_" + target + "_" + str(beta))
+            output_path = os.path.join(valid_imgs_path, target + "_" + str(beta))
             if not os.path.isdir(output_path):
                 os.mkdir(output_path)
 
