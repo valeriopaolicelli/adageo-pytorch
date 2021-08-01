@@ -7,14 +7,13 @@ folder = "/home/francescom/adageo-WACV2021/src"
 if not os.path.abspath(os.curdir) == folder:
     sys.exit()
 
-print("here")
 os.makedirs(f"{folder}/jobs", exist_ok=True)
 os.makedirs(f"{folder}/out_job", exist_ok=True)
 
 for seed in range(3):
-    for target_domain in ["snow", "rain", "overcast"]:
+    for target_domain in ["snow", "rain", "overcast", "sun", "night"]:
         for shots in ["5"]:
-            for beta in ["0.01"]:
+            for beta in ["0.0001"]:
                 print(f"queries_{target_domain}_pseudo_{shots}_{beta}")
                 exp_name = f"{target_domain}_{beta}_{shots}"
                 exp_name_seed = f"{exp_name}_{beta}_{seed}"

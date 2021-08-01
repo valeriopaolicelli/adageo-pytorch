@@ -71,10 +71,9 @@ def parse_arguments():
     parser.add_argument("--dataset_root", type=str, default="./datasets/svox/images", help="Root path of the dataset")
     parser.add_argument("--train_q", type=str, default="train/queries", help="Path train query")
     parser.add_argument("--val_q", type=str, default="val/queries", help="Path val query")
-    parser.add_argument("--beta", type=float, default=0.001, help = "Beta hyperparameter")
-    parser.add_argument("--val_beta", default=False, action = "store_true", help="If True validate beta")
-    parser.add_argument("--targets", nargs = "+", default=["night", "overcast", "rain", "snow", "sun"], help="Domains of adaptation")
-    parser.add_argument("--shots", nargs = "+", default=['1', '5', '20', '50', 'ALL'], help="Number of shots for domain adaptation")
+    parser.add_argument("--beta", type=float, default=0.01, help = "Beta hyperparameter")
+    parser.add_argument("--target", default="snow", help="Target domain of adaptation")
+    parser.add_argument("--shots", default="1", help="Number of shots for domain adaptation")
 
     return parser.parse_args()
 
