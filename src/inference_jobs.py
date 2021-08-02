@@ -36,9 +36,9 @@ for out_folder in sorted(os.listdir(folder + "/runs/beta_selected/")):
     f"--dataset_root=/home/francescom/adageo-WACV2021/src/datasets/svox/images --test_g=test/gallery " +
     f"--model_folder={out_folder} --exp_name=beta_selected --grl --attention")
 
-    with open(filename, "w") as file:
-        _ = file.write(content)
+    # with open(filename, "w") as file:
+    #     _ = file.write(content)
 
-    _ = os.system(f"sbatch {filename}")
+    # _ = os.system(f"sbatch {filename}")
 
-    time.sleep(1)
+    # time.sleep(1)
