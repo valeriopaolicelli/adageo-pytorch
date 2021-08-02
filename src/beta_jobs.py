@@ -10,11 +10,10 @@ if not os.path.abspath(os.curdir) == folder:
 os.makedirs(f"{folder}/jobs", exist_ok=True)
 os.makedirs(f"{folder}/out_job", exist_ok=True)
 
-for seed in range(3):
+for seed in range(1):
     for target_domain in ["snow", "rain", "overcast", "sun", "night"]:
         for shots in ["5"]:
-            for beta in ["0.0001"]:
-                print(f"queries_{target_domain}_pseudo_{shots}_{beta}")
+            for beta in ["0.01", "0.005", "0.001", "0.0005"]:
                 exp_name = f"{target_domain}_{beta}_{shots}"
                 exp_name_seed = f"{exp_name}_{beta}_{seed}"
                 filename = f"{folder}/jobs/{exp_name_seed}.job"
@@ -31,7 +30,8 @@ for seed in range(3):
                 "source /home/gabriele/iccv_tutto/myenv/bin/activate \n" +
                 f"python {folder}/main.py " +
                 f"--seed={seed} --dataset_root=/home/francescom/adageo-WACV2021/src/datasets/svox/images " +
-                f"--test_g=test/gallery --test_q=test/queries_{target_domain} --grl --attention " +
+                f"--test_g=test/gallery --test_q=test/queries_{target_domain} --train_q=train/queries_{target_domain}_pseudo_{shots}_{beta} "
+                f"--grl --attention --exp_name={exp_name} " +
                 f"--grl_datasets=train/queries+test/queries_{target_domain}+train/queries_{target_domain}_pseudo_{shots}_{beta} " +
                 f"--val_q=val/queries_{target_domain}_pseudo_{shots}_{beta}\n")
             
@@ -40,4 +40,4 @@ for seed in range(3):
             
                 _ = os.system(f"sbatch {filename}")
 
-                time.sleep(10)
+                time.sleep(1)

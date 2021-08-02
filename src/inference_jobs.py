@@ -12,12 +12,12 @@ for out_folder in sorted(os.listdir(folder + "/runs/beta_selected/")):
     if out_folder == "readme.txt":
         continue
 
-    output_path = folder + "/runs/beta_selected/" + out_folder
+    output_path = "/home/francescom/adageo-WACV2021/src/runs/beta_selected/" + out_folder
     with open(output_path + "/info.log", "r") as f:
         line = f.readline().split(", ")
         seed = line[22].split("=")[-1]
         domain = line[-1].split("_")[2]
-        exp_name_seed = "inference_" + domain + "_" + seed
+        exp_name_seed = domain + "_" + seed + "_inference"
 
     filename = f"{folder}/jobs/{exp_name_seed}.job"
 
@@ -34,11 +34,12 @@ for out_folder in sorted(os.listdir(folder + "/runs/beta_selected/")):
     "source /home/gabriele/iccv_tutto/myenv/bin/activate \n" +
     f"python {folder}/make_inference.py " +
     f"--dataset_root=/home/francescom/adageo-WACV2021/src/datasets/svox/images --test_g=test/gallery " +
-    f"--model_folder={out_folder} --exp_name=beta_selected --grl --attention")
+    f"--grl_datasets=a+b+c " # needed for right sizing of GRL discriminator layer
+    f"--model_folder={out_folder} --exp_name=beta_discarded --grl --attention")
 
-    # with open(filename, "w") as file:
-    #     _ = file.write(content)
+    with open(filename, "w") as file:
+        _ = file.write(content)
 
-    # _ = os.system(f"sbatch {filename}")
+    _ = os.system(f"sbatch {filename}")
 
-    # time.sleep(1)
+    time.sleep(1)

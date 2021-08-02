@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import traceback
 import torch
 import torch.nn as nn
 
@@ -57,6 +58,7 @@ for test_q in test_queries:
     logging.info(f"Test set: {whole_test_set}")
 
     # ######################################### TEST on TEST SET #########################################
+    print(f"Output folder: {args.output_folder}")
     best_model_state_dict = torch.load(f"{args.output_folder}/best_model.pth")["state_dict"]
     model.load_state_dict(best_model_state_dict)
 
