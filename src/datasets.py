@@ -22,29 +22,38 @@ db_struct = namedtuple("db_struct", ["gallery_images", "gallery_utms", "query_im
                                      "val_pos_dist_threshold", "train_pos_dist_threshold"])
 
 
-def parse_db_struct(dataset_root, gallery_path, query_path):
+def parse_db_struct(dataset_root, gallery_path, query_paths):
     gallery_path = f"{dataset_root}/{gallery_path}"
-    query_path = f"{dataset_root}/{query_path}"
     if not os.path.exists(gallery_path): raise Exception(f"{gallery_path} does not exist")
-    if not os.path.exists(query_path): raise Exception(f"{query_path} does not exist")
     db_images = sorted(glob(f"{gallery_path}/**/*.jpg", recursive=True))
-    q_images =  sorted(glob(f"{query_path}/**/*.jpg", recursive=True))
     db_utms =  np.array([(float(img.split("@")[1]), float(img.split("@")[2])) for img in db_images])
+    query_paths = query_paths.split("+")
+    q_images = [] 
+    for query_path in query_paths:
+        query_path = f"{dataset_root}/{query_path}"
+        if not os.path.exists(query_path): raise Exception(f"{query_path} does not exist")
+        q_images.extend(sorted(glob(f"{query_path}/**/*.jpg", recursive=True))) 
+        print(len(q_images))
     q_utms =   np.array([(float(img.split("@")[1]), float(img.split("@")[2])) for img in q_images])
     num_gallery = len(db_images)
     num_queries = len(q_images)
+    print(num_queries)
+    print(q_images[0])
+    print(q_images[int(len(q_images)/2)])
+    print(q_images[-1])
     val_pos_dist_threshold = 25
     train_pos_dist_threshold = 10
+    assert False, "Stop here"
     return db_struct(db_images, db_utms, q_images, q_utms, num_gallery, num_queries,
                      val_pos_dist_threshold, train_pos_dist_threshold)
 
 
 class WholeDataset(data.Dataset):
     # Dataset with both gallery and query images, used for inference (testing and building cache)
-    def __init__(self, dataset_root, gallery_path, query_path):
+    def __init__(self, dataset_root, gallery_path, query_paths):
         super().__init__()
         self.transform = transform()
-        self.db_struct = parse_db_struct(dataset_root, gallery_path, query_path)
+        self.db_struct = parse_db_struct(dataset_root, gallery_path, query_paths)
         self.images = [dbIm for dbIm in self.db_struct.gallery_images]
         self.images += [qIm for qIm in self.db_struct.query_images]
         # Find positives within val_pos_dist_threshold (25 meters), in self.positives_per_query
@@ -53,7 +62,7 @@ class WholeDataset(data.Dataset):
         self.positives_per_query = knn.radius_neighbors(self.db_struct.query_utms, 
                                               radius=self.db_struct.val_pos_dist_threshold,
                                               return_distance=False)
-        self.info = f"< WholeDataset queries: {query_path} ({self.db_struct.num_queries}); gallery: {gallery_path} ({self.db_struct.num_gallery}) >"
+        self.info = f"< WholeDataset queries: {query_paths} ({self.db_struct.num_queries}); gallery: {gallery_path} ({self.db_struct.num_gallery}) >"
     def __getitem__(self, index):
         img = Image.open(self.images[index])
         img = self.transform(img)
@@ -92,12 +101,12 @@ def collate_fn(batch):
 
 class QueryDataset(data.Dataset):
     # Dataset class used for training.
-    def __init__(self, dataset_root, gallery_path, query_path, output_folder):
+    def __init__(self, dataset_root, gallery_path, query_paths, output_folder):
         super().__init__()
         self.output_folder = output_folder
         self.transform = transform()
         self.margin = 0.1
-        self.db_struct = parse_db_struct(dataset_root, gallery_path, query_path)
+        self.db_struct = parse_db_struct(dataset_root, gallery_path, query_paths)
         self.n_neg_samples = 1000 # Number of negatives to randomly sample
         self.n_neg = 10 # Number of negatives per query in each batch
         # Find positives within train_pos_dist_threshold (10 meters), in self.positives_per_query
@@ -129,7 +138,7 @@ class QueryDataset(data.Dataset):
             self.negatives_per_query.append(np.setdiff1d(np.arange(self.db_struct.num_gallery),
                                                          pos, assume_unique=True))
         self.neg_cache = [np.empty((0,)) for _ in range(self.db_struct.num_queries)]
-        self.info = f"< QueryDataset queries: {query_path} ({self.db_struct.num_queries}); gallery: {gallery_path} ({self.db_struct.num_gallery}) >"
+        self.info = f"< QueryDataset queries: {query_paths} ({self.db_struct.num_queries}); gallery: {gallery_path} ({self.db_struct.num_gallery}) >"
     def __getitem__(self, index):
         with h5py.File(f"{self.output_folder}/cache.hdf5", mode="r") as h5: 
             cache = h5.get("cache")
