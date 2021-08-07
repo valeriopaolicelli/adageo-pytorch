@@ -10,12 +10,12 @@ if not os.path.abspath(os.curdir) == folder:
 os.makedirs(f"{folder}/jobs", exist_ok=True)
 os.makedirs(f"{folder}/out_job", exist_ok=True)
 
-for seed in range(1):
+for seed in range(1, 3):
     for target_domain in ["snow", "rain", "overcast", "sun", "night"]:
         for shots in ["5"]:
-            for beta in ["0.01", "0.005", "0.001", "0.0005"]:
+            for beta in ["0.005", "0.001"]:
                 exp_name = f"{target_domain}_{beta}_{shots}"
-                exp_name_seed = f"{exp_name}_{beta}_{seed}"
+                exp_name_seed = f"{exp_name}_{seed}"
                 filename = f"{folder}/jobs/{exp_name_seed}.job"
                 content = ("" +
                 "#!/bin/bash \n" +
