@@ -46,6 +46,8 @@ logging.info(f"Train whole set: {whole_train_set}")
 whole_val_set = datasets.WholeDataset(args.dataset_root, args.val_g, args.val_q)
 logging.info(f"Val set: {whole_val_set}")
 
+
+
 if args.grl:
     grl_dataset = grl_util.GrlDataset(args.dataset_root, args.grl_datasets.split("+"))
 else:

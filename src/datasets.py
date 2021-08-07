@@ -33,17 +33,11 @@ def parse_db_struct(dataset_root, gallery_path, query_paths):
         query_path = f"{dataset_root}/{query_path}"
         if not os.path.exists(query_path): raise Exception(f"{query_path} does not exist")
         q_images.extend(sorted(glob(f"{query_path}/**/*.jpg", recursive=True))) 
-        print(len(q_images))
     q_utms =   np.array([(float(img.split("@")[1]), float(img.split("@")[2])) for img in q_images])
     num_gallery = len(db_images)
     num_queries = len(q_images)
-    print(num_queries)
-    print(q_images[0])
-    print(q_images[int(len(q_images)/2)])
-    print(q_images[-1])
     val_pos_dist_threshold = 25
     train_pos_dist_threshold = 10
-    assert False, "Stop here"
     return db_struct(db_images, db_utms, q_images, q_utms, num_gallery, num_queries,
                      val_pos_dist_threshold, train_pos_dist_threshold)
 
