@@ -33,9 +33,11 @@ def msls_inference(city):
 
     # Repeat inference with all trained models
     for seed in range(3):
-        exp_name = f"msls/{city}_{seed}"
+        exp_name = f"{city}_{seed}"
+        msls_exp_name = f"msls/{exp_name}"
         filename = f"{folder}/jobs/{exp_name}.job"
-        model_folder = folder + f"/runs/fda/all_{seed}_0.001_5/" + os.listdir(f"/runs/fda/all_{seed}_0.001_5/")[0]
+        logs_folder = folder +  f"/runs/fda/all_{seed}_0.001_5/"
+        model_path = logs_folder + os.listdir(logs_folder)[0] + "/best_model.pth"
 
         content = ("" + 
         "#!/bin/bash \n" +
@@ -48,20 +50,24 @@ def msls_inference(city):
         f"#SBATCH --error={folder}/out_job/err_{exp_name}.txt \n" +
         "ml purge \nml Python/3.6.6-gomkl-2018b \n" +
         "source /home/gabriele/iccv_tutto/myenv/bin/activate \n" +
-        f"python {folder}/inference.py " + 
+        f"python {folder}/eval.py " + 
         f"--seed={seed} --dataset_root=/home/francescom/adageo-WACV2021/src/datasets/msls/{city} " +
         f"--test_g=gallery --test_q=queries " +
-        f"--grl --attention --exp_name={exp_name} " +
-        f"--grl_dataset={grl} --model_folder={model_folder}"
+        # f"--seed={seed} --dataset_root=/home/francescom/adageo-WACV2021/src/datasets/svox/images " +
+        # f"--test_g=test/gallery --test_q=test/queries " +
+        f"--grl --attention --exp_name={msls_exp_name} " +
+        f"--grl_dataset={grl} --resume={model_path}"
         )
+
+        print(content)
 
         # Launch job
         with open(filename, "w") as file:
             _ = file.write(content)
 
-        _ = os.system(f"sbatch {filename}")
+        # _ = os.system(f"sbatch {filename}")
 
-        time.sleep(1)
+        # time.sleep(1)
 
 
 def beta():

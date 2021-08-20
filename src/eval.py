@@ -23,7 +23,7 @@ assert args.resume != None, "resume is set to None, please set it to the path of
 model = util.build_model(args)
 
 ######################################### RESUME #########################################
-model_state_dict = torch.load(args.resume)["state_dict"]
+model_state_dict = torch.load(args.resume, map_location=torch.device('cpu'))["state_dict"]
 model.load_state_dict(model_state_dict, strict=False)
 
 ######################################### DATASETS #########################################
