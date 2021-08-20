@@ -59,13 +59,13 @@ def msls_inference(city):
         f"--grl_dataset={grl} --resume={model_path}"
         )
 
-        print(content)
-
         # Launch job
         with open(filename, "w") as file:
             _ = file.write(content)
 
-        # _ = os.system(f"sbatch {filename}")
+        _ = os.system(f"sbatch {filename}")
+
+        break
 
         # time.sleep(1)
 

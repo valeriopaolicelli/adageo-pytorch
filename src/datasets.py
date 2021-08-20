@@ -12,11 +12,25 @@ import faiss
 from glob import glob
 import os
 
-def transform():
-    return transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
+def transform(dataset):
+    if dataset == "svox":
+        return transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    elif dataset == "msls":
+        return transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Resize((360, 640)),
+        ])
+
+    elif dataset == "st_lucia":
+        return None
+
+    raise Exception(f"Dataset must be a value between [svox, msls, st_lucia], instead got {dataset}")
+    
 
 db_struct = namedtuple("db_struct", ["gallery_images", "gallery_utms", "query_images", "query_utms", "num_gallery", "num_queries",
                                      "val_pos_dist_threshold", "train_pos_dist_threshold"])
@@ -44,9 +58,9 @@ def parse_db_struct(dataset_root, gallery_path, query_paths):
 
 class WholeDataset(data.Dataset):
     # Dataset with both gallery and query images, used for inference (testing and building cache)
-    def __init__(self, dataset_root, gallery_path, query_paths):
+    def __init__(self, dataset_root, gallery_path, query_paths, dataset=None):
         super().__init__()
-        self.transform = transform()
+        self.transform = transform(dataset)
         self.db_struct = parse_db_struct(dataset_root, gallery_path, query_paths)
         self.images = [dbIm for dbIm in self.db_struct.gallery_images]
         self.images += [qIm for qIm in self.db_struct.query_images]
