@@ -13,7 +13,7 @@ from glob import glob
 import os
 
 def transform(dataset):
-    if dataset == "svox":
+    if dataset == "svox" or dataset == "st_lucia":
         return transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -25,9 +25,6 @@ def transform(dataset):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             transforms.Resize((360, 640)),
         ])
-
-    elif dataset == "st_lucia":
-        return None
 
     raise Exception(f"Dataset must be a value between [svox, msls, st_lucia], instead got {dataset}")
     
