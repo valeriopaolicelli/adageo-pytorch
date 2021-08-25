@@ -17,6 +17,44 @@ def parse_arguments():
 
     return parser.parse_args()
 
+def scancel():
+    for i in range(104814, 104979):
+        _ = os.system(f"scancel {i}")
+
+
+def inference_content(exp_name, exp_dir, folder, dataset_root, model_path, seed, grl = None):
+    """
+    Content of the .job file for msls inference
+    Args:
+        exp_name (str): name of the experiment (seen in squeue)
+        exp_dir (str): name of the folder where experiment results are stored
+        folder (str): directory with the eval.py file
+        dataset_root (str): directory with the data
+        model path (str): directory with best_model.pth
+        seed (int): training seed
+        grl (list): list of grl datasets. These are just placeholders in inference 
+    """
+    content = ("" + 
+            "#!/bin/bash \n" +
+            f"#SBATCH --job-name={exp_name} \n" +
+            "#SBATCH --gres=gpu:1 \n" +
+            "#SBATCH --cpus-per-task=3 \n" +
+            "#SBATCH --mem=30GB \n" +
+            "#SBATCH --time=48:00:00 \n" +
+            f"#SBATCH --output={folder}/out_job/out_{exp_name}.txt \n" +
+            f"#SBATCH --error={folder}/out_job/err_{exp_name}.txt \n" +
+            "ml purge \nml Python/3.6.6-gomkl-2018b \n" +
+            "source /home/gabriele/iccv_tutto/myenv/bin/activate \n" +
+            f"python {folder}/eval.py " + 
+            f"--seed={seed} --dataset_root={dataset_root} " +
+            f"--test_g=gallery --test_q=queries " +
+            f"--attention --exp_name={exp_dir} --resume={model_path} ")
+
+    if grl is not None:
+        content += f"--grl_dataset={grl} --grl"
+
+    return (content)
+
 
 def launch(content, filename):
     """
@@ -42,35 +80,22 @@ def msls_inference():
     # Match GRL dimensionality
     grl = '+'.join(["a" for _ in range(11)])
 
-    # Repeat inference with all trained models
     cities = ["nairobi", "cph", "sf", "tokyo", "saopaulo"]
     for city in cities:
         for seed in range(3):
+            # Set up arguments
             exp_name = f"{city}_{seed}"
-            msls_exp_name = f"msls/{exp_name}"
+            exp_dir= f"msls/{exp_name}"
             filename = f"{folder}/jobs/{exp_name}.job"
             logs_folder = folder +  f"/runs/fda/all_{seed}_0.001_5/"
             model_path = logs_folder + os.listdir(logs_folder)[0] + "/best_model.pth"
+            dataset_root = f"/home/francescom/adageo-WACV2021/src/datasets/msls/{city}"
 
-            content = ("" + 
-            "#!/bin/bash \n" +
-            f"#SBATCH --job-name={exp_name} \n" +
-            "#SBATCH --gres=gpu:1 \n" +
-            "#SBATCH --cpus-per-task=3 \n" +
-            "#SBATCH --mem=30GB \n" +
-            "#SBATCH --time=48:00:00 \n" +
-            f"#SBATCH --output={folder}/out_job/out_{exp_name}.txt \n" +
-            f"#SBATCH --error={folder}/out_job/err_{exp_name}.txt \n" +
-            "ml purge \nml Python/3.6.6-gomkl-2018b \n" +
-            "source /home/gabriele/iccv_tutto/myenv/bin/activate \n" +
-            f"python {folder}/eval.py " + 
-            f"--seed={seed} --dataset_root=/home/francescom/adageo-WACV2021/src/datasets/msls/{city} " +
-            f"--test_g=gallery --test_q=queries " +
-            f"--grl --attention --exp_name={msls_exp_name} " +
-            f"--grl_dataset={grl} --resume={model_path}"
-            )
-
+            # .job file content
+            content = inference_content(exp_name, exp_dir, folder, dataset_root, model_path, seed, grl)
+            # Launch the job
             launch(content, filename)
+
 
 def st_lucia_inference():
     # Run models trained on all seeds
@@ -87,39 +112,67 @@ def st_lucia_inference():
 
     # Repeat inference with all trained models
     for seed in range(3):
+        # Set up arguments
         exp_name = f"st_lucia_{seed}"
-        st_lucia_exp_name = f"st_lucia/{exp_name}"
+        exp_dir = f"st_lucia/{exp_name}"
         filename = f"{folder}/jobs/{exp_name}.job"
         logs_folder = folder +  f"/runs/fda/all_{seed}_0.001_5/"
         model_path = logs_folder + os.listdir(logs_folder)[0] + "/best_model.pth"
+        dataset_root = "/home/francescom/adageo-WACV2021/src/datasets/st_lucia/images"
 
-        content = ("" + 
-        "#!/bin/bash \n" +
-        f"#SBATCH --job-name={exp_name} \n" +
-        "#SBATCH --gres=gpu:1 \n" +
-        "#SBATCH --cpus-per-task=3 \n" +
-        "#SBATCH --mem=30GB \n" +
-        "#SBATCH --time=48:00:00 \n" +
-        f"#SBATCH --output={folder}/out_job/out_{exp_name}.txt \n" +
-        f"#SBATCH --error={folder}/out_job/err_{exp_name}.txt \n" +
-        "ml purge \nml Python/3.6.6-gomkl-2018b \n" +
-        "source /home/gabriele/iccv_tutto/myenv/bin/activate \n" +
-        f"python {folder}/eval.py " + 
-        f"--seed={seed} --dataset_root=/home/francescom/adageo-WACV2021/src/datasets/st_lucia/images " +
-        f"--test_g=test/gallery --test_q=test/queries " +
-        f"--grl --attention --exp_name={st_lucia_exp_name} " +
-        f"--grl_dataset={grl} --resume={model_path}"
-        )
-
+        # .job file content
+        content = inference_content(exp_name, exp_dir, folder, dataset_root, model_path, seed, grl)
+        # Launch the job
         launch(content, filename)
 
 
+
 def baselines_inference():
-    base_folder = "/home/gabriele/wacv/all_complete_runs/resnet/results"
-    folders = sorted(glob(f"{base_folder}/*few*") + glob(f"{base_folder}/afn*") + 
-        glob(f"{base_folder}/baseline") + glob(f"{base_folder}/coral[1-5]_w*"))
-    
-    print(glob(folders[0] + "/*"))
+    folder = "/home/francescom/adageo-WACV2021/src"
+    base_dir = "/home/gabriele/wacv/all_complete_runs/resnet/results"
+    dirs = sorted(glob(f"{base_dir}/*few*") + glob(f"{base_dir}/afn*") + 
+        glob(f"{base_dir}/baseline") + glob(f"{base_dir}/coral[1-5]_w*"))
+
+    cities = ["nairobi", "cph", "sf", "tokyo", "saopaulo"]
+    for dir in dirs:
+        seeds_dirs = sorted(glob(dir + "/*"))
+        for seed, seed_dir in enumerate(seeds_dirs):
+            model_name = seed_dir.split("/")[-2]
+            try:
+                model_path = glob(seed_dir + "/best_model.pth")[0]
+            except IndexError:
+                # There is no best_model.pth in the model folder
+                continue
+            os.makedirs(folder + f"/runs/baselines/msls/{model_name}", exist_ok =True) # check
+            os.makedirs(folder + f"/runs/baselines/st_lucia/{model_name}", exist_ok =True) # check
+
+            # MSLS
+            for city in cities:
+                exp_name = f"{city}_{model_name}_{seed}"
+                exp_dir = f"baselines/msls/{model_name}/{city}_{seed}"
+                filename = f"{folder}/jobs/{exp_name}.job"
+                dataset_root = f"/home/francescom/adageo-WACV2021/src/datasets/msls/{city}"
+
+                # .job file content
+                content = inference_content(exp_name, exp_dir, folder,
+                 dataset_root, model_path, seed)
+
+                # Launch the job
+                launch(content, filename)
+            
+            # ST_LUCIA
+            exp_name = f"st_lucia_{model_name}_{seed}"
+            exp_dir = f"baselines/st_lucia/{model_name}/st_lucia_{seed}"
+            filename = f"{folder}/jobs/{exp_name}.job"
+            dataset_root = f"/home/francescom/adageo-WACV2021/src/datasets/st_lucia/images/test"
+
+            # .job file content
+            content = inference_content(exp_name, exp_dir, folder,
+                dataset_root, model_path, seed)
+
+            # Launch the job
+            launch(content, filename)
+
 
 def beta():
     folder = "/home/francescom/adageo-WACV2021/src"
@@ -229,7 +282,7 @@ def all_domains(beta, shots):
 
         launch(content, filename)
         
-
+        
 def main():
     args = parse_arguments()
     job = args.job
@@ -246,6 +299,8 @@ def main():
         st_lucia_inference()
     elif job == "baselines":
         baselines_inference()
+    elif job == "scancel":
+        scancel()
     else:
         print("Unexisting script: please provide a valid value")
 
