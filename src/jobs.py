@@ -22,9 +22,9 @@ def scancel():
         _ = os.system(f"scancel {i}")
 
 
-def inference_content(exp_name, exp_dir, folder, dataset_root, model_path, seed, grl = None):
+def inference_content(exp_name, exp_dir, folder, dataset_root, model_path, seed, pretrain, grl = None):
     """
-    Content of the .job file for msls inference
+    Content of the .job file for inference
     Args:
         exp_name (str): name of the experiment (seen in squeue)
         exp_dir (str): name of the folder where experiment results are stored
@@ -48,7 +48,7 @@ def inference_content(exp_name, exp_dir, folder, dataset_root, model_path, seed,
             f"python {folder}/eval.py " + 
             f"--seed={seed} --dataset_root={dataset_root} " +
             f"--test_g=gallery --test_q=queries " +
-            f"--attention --exp_name={exp_dir} --resume={model_path} ")
+            f"--attention --exp_name={exp_dir} --resume={model_path} --pretrain={pretrain}")
 
     if grl is not None:
         content += f"--grl_dataset={grl} --grl"
@@ -131,13 +131,12 @@ def baselines_inference():
     # Map: {1: Sun, 2: Snow, 3: Rain, 4: Night, 5: Overcast}
     folder = "/home/francescom/adageo-WACV2021/src"
     base_dir = "/home/gabriele/wacv/all_complete_runs/resnet/results"
-    # paper_models = [
-    #     "coral1_w0.1","coral2_w0.1","coral3_w0.1","coral4_w0.1","coral5_w0.1",
-    #     "afn_2_w00001","afn_3_w00001","afn_1_w00001","afn_4_w00001","afn_5_w00001",
-    #     "grl2_all","grl3_all","grl1_all","grl4_all","grl5_all",
-    #     "baseline"
-    # ]
-    paper_models = ["coral2_w0.1","coral3_w0.1"]
+    paper_models = [
+        "coral1_w0.1","coral2_w0.1","coral3_w0.1","coral4_w0.1","coral5_w0.1",
+        "afn_2_w00001","afn_3_w00001","afn_1_w00001","afn_4_w00001","afn_5_w00001",
+        "grl2_all","grl3_all","grl1_all","grl4_all","grl5_all",
+        "baseline"
+    ]
     
     dirs = [f"{base_dir}/{model}" for model in paper_models]
     cities = ["nairobi", "cph", "sf", "tokyo", "saopaulo"]
@@ -162,9 +161,12 @@ def baselines_inference():
                 dataset_root = f"/home/francescom/adageo-WACV2021/src/datasets/msls/{city}"
 
                 # .job file content
-                content = inference_content(exp_name, exp_dir, folder,
-                 dataset_root, model_path, seed)
-
+                if model_name in ["coral2_w0.1","coral3_w0.1"]:
+                    content = inference_content(exp_name, exp_dir, folder,
+                        dataset_root, model_path, seed, pretrain="imagenet")
+                else:
+                    content = inference_content(exp_name, exp_dir, folder,
+                        dataset_root, model_path, seed, pretrain="places")
                 # Launch the job
                 launch(content, filename)
             
@@ -175,9 +177,12 @@ def baselines_inference():
             dataset_root = f"/home/francescom/adageo-WACV2021/src/datasets/st_lucia/images/test"
 
             # .job file content
-            content = inference_content(exp_name, exp_dir, folder,
-                dataset_root, model_path, seed)
-
+            if model_name in ["coral2_w0.1","coral3_w0.1"]:
+                content = inference_content(exp_name, exp_dir, folder,
+                    dataset_root, model_path, seed, pretrain="imagenet")
+            else:
+                content = inference_content(exp_name, exp_dir, folder,
+                    dataset_root, model_path, seed, pretrain="places")
             # Launch the job
             launch(content, filename)
 
