@@ -18,7 +18,7 @@ def parse_arguments():
     return parser.parse_args()
 
 def scancel():
-    for i in range(104814, 104979):
+    for i in range(105588, 105624):
         _ = os.system(f"scancel {i}")
 
 
@@ -128,14 +128,22 @@ def st_lucia_inference():
 
 
 def baselines_inference():
+    # Map: {1: Sun, 2: Snow, 3: Rain, 4: Night, 5: Overcast}
     folder = "/home/francescom/adageo-WACV2021/src"
     base_dir = "/home/gabriele/wacv/all_complete_runs/resnet/results"
-    dirs = sorted(glob(f"{base_dir}/*few*") + glob(f"{base_dir}/afn*") + 
-        glob(f"{base_dir}/baseline") + glob(f"{base_dir}/coral[1-5]_w*"))
-
+    # paper_models = [
+    #     "coral1_w0.1","coral2_w0.1","coral3_w0.1","coral4_w0.1","coral5_w0.1",
+    #     "afn_2_w00001","afn_3_w00001","afn_1_w00001","afn_4_w00001","afn_5_w00001",
+    #     "grl2_all","grl3_all","grl1_all","grl4_all","grl5_all",
+    #     "baseline"
+    # ]
+    paper_models = ["coral2_w0.1","coral3_w0.1"]
+    
+    dirs = [f"{base_dir}/{model}" for model in paper_models]
     cities = ["nairobi", "cph", "sf", "tokyo", "saopaulo"]
     for dir in dirs:
         seeds_dirs = sorted(glob(dir + "/*"))
+
         for seed, seed_dir in enumerate(seeds_dirs):
             model_name = seed_dir.split("/")[-2]
             try:

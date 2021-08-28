@@ -7,12 +7,10 @@ import sys
 import json
 import numpy as np
 import pandas as pd
+from glob import glob
 
 BASE_FOLDER = "/home/francescom/adageo-WACV2021/src/runs"
 FDA_OUTPUT_PATH = BASE_FOLDER + "/fda/beta_tuning.json"
-MSLS_OUTPUT_PATH = BASE_FOLDER + "/msls/msls_scores.json"
-LUCIA_OUTPUT_PATH = BASE_FOLDER + "/st_lucia/st_lucia_scores.json"
-
 
 def score_from_line(line):
     score_start_idx = line.index("R@1") + len("@R1: ")
@@ -20,52 +18,45 @@ def score_from_line(line):
     score = line[score_start_idx:score_end_idx]
 
     return float(score)
-    
 
-def scores_from_folder(target, seed, beta = None):
+    
+def scores_from_folder(folder):
     """
     Args:
-    target (str): inference domain(fda) or city(msls)
-    seed (int): seed of the run
-    beta (float): beta used for FDA style transfer. Set only for fda
+    folder (str): path to the folder from which to extract the scores
 
     Return: 
-    inference_scores (dict): key value pairs where key = inference_target, value = R@1 score
+    inference_scores (str): R@1 score
     """
-
-    inference_scores = []
-    if beta is not None:
-        folder = os.path.join(BASE_FOLDER, f"{target}_{seed}_{beta}_5")
-    else:
-        folder = os.path.join(BASE_FOLDER, f"{target}_{seed}")
-    
     logs_path = os.path.join(folder, os.listdir(folder)[0], "info.log")
-
+    inference_score = None
     with open(logs_path, "r") as f:
         for line in f:
             if "Recalls on < WholeDataset" in line:
                 score = score_from_line(line)
-                inference_scores.append(score)
+                inference_score = score
 
-    return inference_scores
+    # If None, than there was an error
+    return inference_score
 
 
-def mean_std(target, beta=None):
+def mean_std(models_folder, beta=None):
     """
     Args:
-    target (str): inference domain or city
-    beta (float): beta used for FDA style transfer
+    models_folder (list): list of the folders over to which make average.
+                          These folders refer to same target (e.g. city), and different seed
+    beta (float): set if extracting scores for fda()
 
     Return: 
-    results (dict): key value pairs where key = inference_target, value = mean(R@1 scores), std(R@1 scores) over different seeds
+    (mean, std) (tuple): mean and standard deviation over seeds
     """
     seed_scores = []
-    for seed in range(3):
-        inference_scores = scores_from_folder(target, seed, beta)
-        seed_scores.append(inference_scores)
+    for model_folder in models_folder:
+        inference_score = scores_from_folder(model_folder)
+        assert inference_score is not None, f"Inference score is None for {model_folder}"
+        seed_scores.append(inference_score)
 
     seed_scores = np.array(seed_scores)
-    print(seed_scores)
     mean_std_scores = (np.mean(np.squeeze(seed_scores), axis=0), np.std(np.squeeze(seed_scores), axis=0))
 
     if beta is not None:
@@ -77,30 +68,88 @@ def mean_std(target, beta=None):
         return (round(mean_std_scores[0], 2) , round(mean_std_scores[1], 2))
 
 
-def fda():
-    scores_dict = dict()
-    for target in TARGETS:
-        for beta in ("0.01", "0.001", "0.005"):
-            scores_dict[f"{target} - {beta}"] = mean_std(target, beta)
+def baselines_scores():
+    base_folder = "/home/francescom/adageo-WACV2021/src/runs/baselines"
+    output_file = base_folder + "/logger.txt"
+    msls_cities = ["cph", "nairobi", "tokyo", "sf", "saopaulo"]
+    
+    # Initialize the logger with columns
+    with open(output_file, "w+") as f:
+        f.write("MODEL\t")
+        for city in msls_cities:
+            f.write(city + "\t")
+        f.write("st_lucia\n")
 
-    json_dict = json.dumps(scores_dict, indent = 4)
-    with open(FDA_OUTPUT_PATH, "w+") as f:
-        f.writelines(json_dict)
+        # Get scores
+        architectures = sorted(os.listdir(base_folder + "/msls/"))
+        for architecture in architectures: # e.g. coral1_w0.1
+            if "coral" in architecture:
+                continue
+            arch_folder = base_folder + f"/msls/{architecture}"
+            f.write(architecture + "\t")
+            for city in msls_cities:
+                mean, std = mean_std(sorted(glob(arch_folder + f"/*{city}*")))
+                f.write(f"{mean}+-{std}" + "\t")
+
+            # ST_LUCIA
+            arch_folder = base_folder + f"/st_lucia/{architecture}"
+            mean, std = mean_std(sorted(glob(arch_folder + "/st_lucia*")))
+            f.write(f"{mean}+-{std}" + "\t")
+            f.write("\n")
+
+
+def fda():
+    base_folder = "/home/francescom/adageo-WACV2021/src/runs/fda"
+    output_file = base_folder + "/logger.txt"
+    targets = ("all", "night", "overcast", "rain", "sun", "snow")
+    betas = ("0.01", "0.001", "0.005")
+
+    # Initialize the logger with columns
+    with open(output_file, "w+") as f:
+        f.write("TARGET_BETA\t")
+        for target in targets[1]:
+            f.write(target + "\t")
+        f.write("\n")
+
+        for beta in betas:
+            f.write(beta + "\t")
+            for target in targets:
+                if sorted(glob(base_folder + f"/{target}*{beta}_5")) == []:
+                    f.write("None\t")
+                    continue
+                mean, std = mean_std(sorted(glob(base_folder + f"/{target}*{beta}_5")))
+                f.write(f"{mean}+-{std}" + "\t")
+            f.write("\n")
+        f.write("\n")
 
 
 def msls():
-    scores_dict = dict()
-    for target in TARGETS:
-        print(TARGETS)
-        scores_dict[target] = mean_std(target)
+    base_folder = "/home/francescom/adageo-WACV2021/src/runs/msls"
+    output_file = base_folder + "/logger.txt"
+    msls_cities = ["cph", "nairobi", "tokyo", "sf", "saopaulo"]
 
-    json_dict = json.dumps(scores_dict, indent=4)
-    with open(MSLS_OUTPUT_PATH, "w+") as f:
-        f.writelines(json_dict)
+    # Initialize the logger with columns
+    with open(output_file, "w+") as f:
+        for city in msls_cities:
+            f.write(city + "\t")
+        f.write("\n")
+
+        for city in msls_cities:
+            mean, std = mean_std(sorted(glob(base_folder + f"/*{city}*")))
+            f.write(f"{mean}+-{std}" + "\t")
+        f.write("\n")
 
 
 def st_lucia():
-    msls()
+    base_folder = "/home/francescom/adageo-WACV2021/src/runs/st_lucia"
+    output_file = base_folder + "/logger.txt"
+
+    # Initialize the logger with columns
+    with open(output_file, "w+") as f:
+        f.write("st_lucia\n")
+        mean, std = mean_std(sorted(glob(base_folder + f"/st_lucia*")))
+        f.write(f"{mean}+-{std}" + "\t")
+        f.write("\n")
 
 
 if __name__ == "__main__":
@@ -115,27 +164,11 @@ if __name__ == "__main__":
         # pd.DataFrame.from_dict(scores_dict, orient='index').to_csv("beta_tuning.csv")
 
     elif task == "msls":
-        BASE_FOLDER += "/msls"
-        TARGETS = ("nairobi", "sf", "saopaulo", "cph", "tokyo")
         msls()
 
-        with open(MSLS_OUTPUT_PATH, "r") as f:
-            scores_dict = json.load(f)
-
-        pd.DataFrame.from_dict(scores_dict, orient='columns').to_csv(BASE_FOLDER + "/msls_scores.csv")
-
     elif task == "st_lucia":
-        BASE_FOLDER += "/st_lucia"
-        TARGETS = ("st_lucia", )
         st_lucia()
 
-        with open(MSLS_OUTPUT_PATH, "r") as f:
-            scores_dict = json.load(f)
-
-        pd.DataFrame.from_dict(scores_dict, orient='columns').to_csv(BASE_FOLDER + "/st_lucia.csv")
-
-    else:
-        my_list = ("arcibaldo")
-        for el in my_list:
-            print(el)
+    elif task == "baselines":
+        baselines_scores()
 
