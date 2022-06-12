@@ -7,3 +7,6 @@ src/jobs
 src/out_job
 env
 tmp
+bin
+lib
+trash
