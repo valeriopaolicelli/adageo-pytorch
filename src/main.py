@@ -46,13 +46,13 @@ logging.info(f"Train whole set: {whole_train_set}")
 whole_val_set = datasets.WholeDataset(args.dataset_root, args.val_g, args.val_q)
 logging.info(f"Val set: {whole_val_set}")
 
-whole_test_set = datasets.WholeDataset(args.dataset_root, args.test_g, args.test_q)
-logging.info(f"Test set: {whole_test_set}")
+
 
 if args.grl:
     grl_dataset = grl_util.GrlDataset(args.dataset_root, args.grl_datasets.split("+"))
 else:
     grl_dataset = None
+
 
 ######################################### TRAINING #########################################
 best_score = 0
@@ -90,9 +90,15 @@ logging.info(f"Best R@5: {best_score:.1f}")
 logging.info(f"Trained for {epoch:02d} epochs, in total in {str(datetime.now() - start_time)[:-7]}")
 
 ######################################### TEST on TEST SET #########################################
-best_model_state_dict = torch.load(f"{args.output_folder}/best_model.pth")["state_dict"]
-model.load_state_dict(best_model_state_dict)
+test_queries = ["queries_night", "queries_overcast", "queries_rain", "queries_sun", "queries_snow"]
+for test_q in test_queries:
+    test_q = "test/" + test_q
+    whole_test_set = datasets.WholeDataset(args.dataset_root, args.test_g, test_q)
+    logging.info(f"Test set: {whole_test_set}")
 
-recalls, recalls_str  = test.test(args, whole_test_set, model)
-logging.info(f"Recalls on {whole_test_set}: {recalls_str}")
+    best_model_state_dict = torch.load(f"{args.output_folder}/best_model.pth")["state_dict"]
+    model.load_state_dict(best_model_state_dict)
+
+    recalls, recalls_str  = test.test(args, whole_test_set, model)
+    logging.info(f"Recalls on {whole_test_set}: {recalls_str}")
 
