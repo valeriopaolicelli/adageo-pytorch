@@ -3,7 +3,7 @@ src/.spyproject
 src/datasets
 src/*.tar
 src/runs
-src/jobs
+src/jobs*
 src/out_job
 env
 tmp
